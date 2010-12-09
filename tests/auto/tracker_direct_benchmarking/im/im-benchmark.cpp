@@ -35,12 +35,12 @@ void IMBenchmark::test_im_01()
 {
     QBENCHMARK {
         QSparqlConnection conn("QTRACKER_DIRECT");
-        QSparqlQuery q("SELECT ?message ?from ?date ?content WHERE {"
-                "?message a nmo:IMMessage ;"
-                "nmo:from ?from ;"
-                "nmo:receivedDate ?date ;"
-                "nie:plainTextContent ?content"
-        "} LIMIT 10000");
+        QSparqlQuery q("SELECT ?message ?from ?date ?content WHERE { "
+                "?message a nmo:IMMessage ; "
+                "nmo:from ?from ; "
+                "nmo:receivedDate ?date ; "
+                "nie:plainTextContent ?content "
+        "} LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);
@@ -54,10 +54,10 @@ void IMBenchmark::test_im_02()
 {
     QBENCHMARK {
         QSparqlConnection conn("QTRACKER_DIRECT");
-        QSparqlQuery q("SELECT ?contact ?status WHERE {"
-                "?contact a  nco:IMAccount;"
-                "nco:imPresence ?status"
-        "} LIMIT 10000");
+        QSparqlQuery q("SELECT ?contact ?status WHERE { "
+                "?contact a  nco:IMAccount; "
+                "nco:imPresence ?status "
+        "} LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);

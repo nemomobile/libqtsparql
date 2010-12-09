@@ -228,7 +228,7 @@ void LocationBenchmark::test_location_02 ()
         "] "
     "} "
   "FILTER(?cLat >= 39.16 && ?cLat <= 40.17 && ?cLon >= 63.94 && ?cLon <= 64.96) "
-"} ORDER BY ASC(?name) LIMIT ");
+"} ORDER BY ASC(?name) LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);
@@ -251,7 +251,7 @@ void LocationBenchmark::test_location_03 ()
   "nie:title(?urn) "
   "nie:description(?urn) "
   "mlo:belongsToCategory(?urn) "
-  "tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) as ?distance "
+  "tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) as ?distance "
 "WHERE { "
   "?urn a mlo:Landmark . "
   "OPTIONAL "
@@ -334,7 +334,7 @@ void LocationBenchmark::test_location_03 ()
     "} "
   "FILTER(?cLat >= 39.16 && ?cLat <= 40.17 && "
          "?cLon >= 63.94 && ?cLon <= 64.96 && "
-  "  tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) <= 25000) "
+  "  tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) <= 25000) "
 "} ORDER BY ASC(?distance) LIMIT 50 ");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
@@ -358,7 +358,7 @@ void LocationBenchmark::test_location_04 ()
   "nie:title(?urn) "
   "nie:description(?urn) "
   "mlo:belongsToCategory(?urn) "
-  "tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) as ?distance "
+  "tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) as ?distance "
 "WHERE { "
   "?urn a mlo:Landmark . "
   "OPTIONAL "
@@ -439,7 +439,7 @@ void LocationBenchmark::test_location_04 ()
             "] "
         "] "
     "} "
-  "FILTER(tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) <= 25000) "
+  "FILTER(tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) <= 25000) "
 "} ORDER BY ASC(?distance) LIMIT 50 ");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
@@ -511,7 +511,7 @@ void LocationBenchmark::test_location_07 ()
   "nie:title(?urn) "
   "nie:description(?urn) "
   "mlo:belongsToCategory(?urn) "
-  "tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) as ?distance "
+  "tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) as ?distance "
 "WHERE { "
   "?urn a mlo:Landmark . "
   "?urn mlo:location ?location . "
@@ -520,7 +520,7 @@ void LocationBenchmark::test_location_07 ()
   "?point mlo:longitude ?cLon . "
   "FILTER(?cLat >= 39.16 && ?cLat <= 40.17 && "
          "?cLon >= 63.94 && ?cLon <= 64.96 && "
-  "  tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) <= 25000) "
+  "  tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) <= 25000) "
 "} ORDER BY ASC(?distance) LIMIT 50 ");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
@@ -541,14 +541,14 @@ void LocationBenchmark::test_location_08 ()
   "nie:title(?urn) "
   "nie:description(?urn) "
   "mlo:belongsToCategory(?urn) "
-  "tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) as ?distance "
+  "tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) as ?distance "
 "WHERE { "
   "?urn a mlo:Landmark . "
   "?urn mlo:location ?location . "
   "?location mlo:asGeoPoint ?point . "
   "?point mlo:latitude ?cLat . "
   "?point mlo:longitude ?cLon . "
-  "FILTER(tracker:haversine-distance(xsd:double(?cLat),xsd:double(39.50),xsd:double(?cLon),xsd:double(64.50)) <= 25000) "
+  "FILTER(tracker:haversine-distance(xsd:double(?cLat), xsd:double(39.50), xsd:double(?cLon), xsd:double(64.50)) <= 25000) "
 "} ORDER BY ASC(?distance) LIMIT 50 ");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);

@@ -37,10 +37,10 @@ void EmailBenchmark::test_email_01()
         QSparqlConnection conn("QTRACKER_DIRECT");
         QSparqlQuery q("SELECT ?m ?From  ?date ?email1 WHERE { "
                "?m a  nmo:Email ; "
-               "nmo:receivedDate ?date ;"
+               "nmo:receivedDate ?date ; "
                "nmo:from ?From . "
-               "?from nco:hasEmailAddress ?email1"
-        "} LIMIT 10000");
+               "?from nco:hasEmailAddress ?email1 "
+        "} LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);
