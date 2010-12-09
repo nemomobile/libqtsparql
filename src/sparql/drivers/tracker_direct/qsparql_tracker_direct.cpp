@@ -58,6 +58,10 @@
 
 QT_BEGIN_NAMESPACE
 
+#ifdef QSPARQL_LOG_RESULTS
+QFile *resultsFile = 0;
+#endif
+
 namespace XSD {
 Q_GLOBAL_STATIC_WITH_ARGS(QUrl, Boolean,
                           (QLatin1String("http://www.w3.org/2001/XMLSchema#boolean")))
@@ -136,6 +140,11 @@ async_cursor_next_callback( GObject *source_object,
                                 && data->results[0].binding(0).value().toBool());
         }
 
+#ifdef QSPARQL_LOG_RESULTS
+        resultsFile->write("  </results>\n");
+        resultsFile->write("</sparql>");
+        resultsFile->close();
+#endif
         data->terminate();
         return;
     }
@@ -147,6 +156,19 @@ async_cursor_next_callback( GObject *source_object,
         for (int i = 0; i < n_columns; i++) {
             data->columnNames.append(QString::fromUtf8(tracker_sparql_cursor_get_variable_name(data->cursor, i)));
         }
+
+#ifdef QSPARQL_LOG_RESULTS
+        resultsFile->write("  <head>\n");
+
+        for (int i = 0; i < n_columns; i++) {
+            resultsFile->write( QByteArray("    <variable name=\"")
+                                    + tracker_sparql_cursor_get_variable_name(data->cursor, i)
+                                    + QByteArray("\"/>\n"));
+        }
+
+        resultsFile->write("  </head>\n");
+        resultsFile->write("  <results>\n");
+#endif
     }
 
     for (int i = 0; i < n_columns; i++) {
@@ -188,6 +210,33 @@ async_cursor_next_callback( GObject *source_object,
 
         resultRow.append(binding);
     }
+
+#ifdef QSPARQL_LOG_RESULTS
+        resultsFile->write("    <result>\n");
+
+        for (int i = 0; i < resultRow.count(); ++i) {
+            resultsFile->write(QByteArray("      <binding name=\"") + data->columnNames[i].toLatin1() + QByteArray("\">\n"));
+            if (resultRow.binding(i).isLiteral()) {
+                resultsFile->write( QByteArray("        <literal datatype=\"")
+                                            + resultRow.binding(i).dataTypeUri().toString().toLatin1()
+                                            + QByteArray("\">")
+                                            + resultRow.value(i).toString().toLatin1()
+                                            + QByteArray("</literal>\n") );
+            } else if (resultRow.binding(i).isUri()) {
+                resultsFile->write( QByteArray("        <uri>")
+                                            + resultRow.value(i).toString().toLatin1()
+                                            + QByteArray("</uri>\n"));
+            } else if (resultRow.binding(i).isBlank()) {
+                resultsFile->write( QByteArray("        <bnode>")
+                                            + resultRow.value(i).toString().toLatin1()
+                                            + QByteArray("</bnode>\n"));
+            }
+
+            resultsFile->write("      </binding>\n");
+        }
+
+        resultsFile->write("    </result>\n");
+#endif
 
     data->results.append(resultRow);
     if (data->results.count() % data->driverPrivate->dataReadyInterval == 0) {
@@ -329,6 +378,18 @@ QTrackerDirectResult* QTrackerDirectDriver::exec(const QString& query,
     case QSparqlQuery::AskStatement:
     case QSparqlQuery::SelectStatement:
     {
+#ifdef QSPARQL_LOG_RESULTS
+        QString resultsFilename = QString::fromLatin1(getenv("QSPARQL_DUMMY_RESULTS"));
+        if (resultsFilename.isEmpty()) {
+            resultsFile = new QTemporaryFile(QDir::tempPath() + QLatin1String("/sparql-results"));
+        } else {
+            resultsFile =  new QFile(resultsFilename);
+        }
+
+        resultsFile->open(QIODevice::WriteOnly);
+        resultsFile->write("<?xml version=\"1.0\"?>\n");
+        resultsFile->write("<sparql xmlns=\"http://www.w3.org/2005/sparql-results#\">\n");
+#endif
         tracker_sparql_connection_query_async(  d->connection,
                                                 query.toLatin1().constData(),
                                                 0,
