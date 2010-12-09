@@ -33,6 +33,8 @@ class ContentBenchmark : public QObject
         Q_OBJECT
 public:
         ContentBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:

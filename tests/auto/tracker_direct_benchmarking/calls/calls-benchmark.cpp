@@ -39,7 +39,7 @@ void CallsBenchmark::test_calls_01()
                 "?call  a  nmo:Call ;"
                 "nmo:duration ?duration ;"
                 "nmo:from [a nco:Contact ; nco:hasPhoneNumber ?phonenumber]"
-        "}LIMIT 10000");
+        "} LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);
@@ -53,20 +53,20 @@ void CallsBenchmark::test_calls_02()
 {
     QBENCHMARK {
         QSparqlConnection conn("QTRACKER_DIRECT");
-        QSparqlQuery q("SELECT ?name ?date ?number ?duration"
+        QSparqlQuery q("SELECT ?name ?date ?number ?duration "
         "WHERE {"
                 "?m a nmo:Call;"
                 "nmo:sentDate ?date ;"
                 "nmo:duration ?duration;"
                 "nmo:to ?contact ."
                 "?contact a nco:PersonContact;"
-                "nco:hasPhoneNumber ?number ."
+                "nco:hasPhoneNumber ?number . "
                 "OPTIONAL {"
                         "?contact a nco:PersonContact ;"
                         "nco:nameFamily ?name"
-                "}"
+                "} "
                 "FILTER (?duration > 0) ."
-        "} ORDER BY desc(?date) LIMIT 1000");
+        "} ORDER BY desc(?date) LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);
@@ -80,7 +80,7 @@ void CallsBenchmark::test_calls_03()
 {
     QBENCHMARK {
         QSparqlConnection conn("QTRACKER_DIRECT");
-        QSparqlQuery q("SELECT ?name ?date ?number ?duration"
+        QSparqlQuery q("SELECT ?name ?date ?number ?duration "
         "WHERE {"
                 "?m a nmo:Call;"
                 "nmo:receivedDate ?date ;"
@@ -90,7 +90,7 @@ void CallsBenchmark::test_calls_03()
                 "nco:hasPhoneNumber ?number . "
                 "OPTIONAL { ?contact a nco:PersonContact ; nco:nameFamily ?name} "
                 "FILTER (?duration > 0) .}"
-        "ORDER BY desc(?date) LIMIT 1000");
+        "ORDER BY desc(?date) LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);
@@ -104,17 +104,16 @@ void CallsBenchmark::test_calls_04()
 {
     QBENCHMARK {
         QSparqlConnection conn("QTRACKER_DIRECT");
-        QSparqlQuery q("SELECT ?name ?date ?number ?duration"
+        QSparqlQuery q("SELECT ?name ?date ?number ?duration "
                 "WHERE {?m a nmo:Call;"
                 "nmo:receivedDate ?date ;"
                 "nmo:duration ?duration;"
                 "nmo:from ?contact ."
                 "?contact a nco:PersonContact;"
-                "nco:hasPhoneNumber ?number ."
-                "OPTIONAL { ?contact a nco:PersonContact ; nco:nameFamily ?name}"
+                "nco:hasPhoneNumber ?number . "
+                "OPTIONAL { ?contact a nco:PersonContact ; nco:nameFamily ?name} "
                 "FILTER (?duration > 0) ."
-        "}"
-        "ORDER BY desc(?date) LIMIT 1000");
+                "} ORDER BY desc(?date) LIMIT 50");
         QSparqlResult* r = conn.exec(q);
         QVERIFY(r != 0);
         QCOMPARE(r->hasError(), false);

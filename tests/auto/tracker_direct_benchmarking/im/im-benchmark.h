@@ -33,6 +33,8 @@ class IMBenchmark : public QObject
         Q_OBJECT
 public:
         IMBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:

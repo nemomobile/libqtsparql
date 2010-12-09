@@ -33,6 +33,8 @@ class LocationBenchmark : public QObject
         Q_OBJECT
 public:
         LocationBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:

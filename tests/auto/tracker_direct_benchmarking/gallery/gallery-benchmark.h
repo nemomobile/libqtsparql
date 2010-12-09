@@ -33,6 +33,8 @@ class GalleryBenchmark : public QObject
         Q_OBJECT
 public:
         GalleryBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:

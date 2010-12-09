@@ -33,6 +33,8 @@ class MusicBenchmark : public QObject
         Q_OBJECT
 public:
         MusicBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:

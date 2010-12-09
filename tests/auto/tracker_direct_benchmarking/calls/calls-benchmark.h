@@ -32,14 +32,16 @@ class CallsBenchmark : public QObject
 {
         Q_OBJECT
 public:
-        CallsBenchmark();
-        void initTestCase();
+    CallsBenchmark();
+
+public slots:
+    void initTestCase();
 
 private slots:
-        void test_calls_01();
-        void test_calls_02();
-        void test_calls_03();
-        void test_calls_04();
+    void test_calls_01();
+    void test_calls_02();
+    void test_calls_03();
+    void test_calls_04();
 };
 
 #endif /* _CALLS_BENCHMARK_H */

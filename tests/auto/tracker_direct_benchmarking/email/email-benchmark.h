@@ -33,6 +33,8 @@ class EmailBenchmark : public QObject
         Q_OBJECT
 public:
         EmailBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:

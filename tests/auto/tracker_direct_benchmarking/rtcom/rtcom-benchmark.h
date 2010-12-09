@@ -33,6 +33,8 @@ class RTComBenchmark : public QObject
         Q_OBJECT
 public:
         RTComBenchmark();
+
+public slots:
         void initTestCase();
 
 private slots:
