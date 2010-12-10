@@ -379,7 +379,7 @@ QTrackerDirectResult* QTrackerDirectDriver::exec(const QString& query,
     case QSparqlQuery::SelectStatement:
     {
 #ifdef QSPARQL_LOG_RESULTS
-        QString resultsFilename = QString::fromLatin1(getenv("QSPARQL_DUMMY_RESULTS"));
+        QString resultsFilename = QString::fromLatin1(getenv("QSPARQL_DUMMY_RESULTS_OUTPUT"));
         if (resultsFilename.isEmpty()) {
             resultsFile = new QTemporaryFile(QDir::tempPath() + QLatin1String("/sparql-results"));
         } else {
