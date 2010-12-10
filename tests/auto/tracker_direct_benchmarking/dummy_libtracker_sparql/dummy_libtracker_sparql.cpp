@@ -66,24 +66,73 @@ static GAsyncResult *async_update_result = 0;
 static QStringList variableNames;
 static QStringList variableValues;
 static QVector<TrackerSparqlValueType> variableDataTypes;
+static gpointer tracker_sparql_cursor_parent_class = NULL;
+
+static void tracker_sparql_cursor_instance_init(TrackerSparqlCursor * self) {
+}
+
+static void tracker_sparql_cursor_real_init(TrackerSparqlCursor* self, GError** error) {
+    g_return_if_fail (self != NULL);
+    g_warning ("tracker-cursor.vala:328: Interface 'init' not implemented");
+}
+
+static void tracker_sparql_cursor_finalize(GObject* obj) {
+    TrackerSparqlCursor * self;
+    self = TRACKER_SPARQL_CURSOR (obj);
+    G_OBJECT_CLASS (tracker_sparql_cursor_parent_class)->finalize (obj);
+}
+
+static void tracker_sparql_cursor_class_init(TrackerSparqlCursorClass * klass) {
+    tracker_sparql_cursor_parent_class = g_type_class_peek_parent (klass);
+    // TRACKER_SPARQL_CURSOR_CLASS (klass)->init = tracker_sparql_cursor_real_init;
+    G_OBJECT_CLASS (klass)->finalize = tracker_sparql_cursor_finalize;
+}
+
+GType tracker_sparql_cursor_get_type(void) {
+    static volatile gsize tracker_sparql_cursor_type_id__volatile = 0;
+    if (g_once_init_enter (&tracker_sparql_cursor_type_id__volatile)) {
+        static const GTypeInfo g_define_type_info = { sizeof (TrackerSparqlCursorClass),
+                                                    (GBaseInitFunc) NULL,
+                                                    (GBaseFinalizeFunc) NULL,
+                                                    (GClassInitFunc) tracker_sparql_cursor_class_init,
+                                                    (GClassFinalizeFunc) NULL,
+                                                    NULL,
+                                                    sizeof (TrackerSparqlCursor),
+                                                    0,
+                                                    (GInstanceInitFunc) tracker_sparql_cursor_instance_init,
+                                                    NULL };
+        GType tracker_sparql_cursor_type_id;
+        tracker_sparql_cursor_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlCursor", &g_define_type_info, (GTypeFlags) 0);
+        // tracker_sparql_cursor_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlCursor", &g_define_type_info, G_TYPE_FLAG_ABSTRACT);
+        g_once_init_leave(&tracker_sparql_cursor_type_id__volatile, tracker_sparql_cursor_type_id);
+    }
+    // printf("tracker_sparql_cursor_get_type() type: %8.8x\n", tracker_sparql_cursor_type_id__volatile);
+    return tracker_sparql_cursor_type_id__volatile;
+}
+
+TrackerSparqlCursor* tracker_sparql_cursor_construct(GType object_type) {
+    TrackerSparqlCursor * self = NULL;
+    self = (TrackerSparqlCursor*) g_object_new(object_type, NULL);
+    return self;
+}
 
 static gpointer tracker_sparql_connection_parent_class = NULL;
 
-static void tracker_sparql_connection_instance_init (TrackerSparqlConnection * self) {
+static void tracker_sparql_connection_instance_init(TrackerSparqlConnection * self) {
 }
 
-static void tracker_sparql_connection_real_init (TrackerSparqlConnection* self, GError** error) {
+static void tracker_sparql_connection_real_init(TrackerSparqlConnection* self, GError** error) {
     g_return_if_fail (self != NULL);
     g_warning ("tracker-connection.vala:328: Interface 'init' not implemented");
 }
 
-static void tracker_sparql_connection_finalize (GObject* obj) {
+static void tracker_sparql_connection_finalize(GObject* obj) {
     TrackerSparqlConnection * self;
     self = TRACKER_SPARQL_CONNECTION (obj);
     G_OBJECT_CLASS (tracker_sparql_connection_parent_class)->finalize (obj);
 }
 
-static void tracker_sparql_connection_class_init (TrackerSparqlConnectionClass * klass) {
+static void tracker_sparql_connection_class_init(TrackerSparqlConnectionClass * klass) {
     tracker_sparql_connection_parent_class = g_type_class_peek_parent (klass);
     TRACKER_SPARQL_CONNECTION_CLASS (klass)->init = tracker_sparql_connection_real_init;
     G_OBJECT_CLASS (klass)->finalize = tracker_sparql_connection_finalize;
@@ -96,19 +145,39 @@ static void tracker_sparql_connection_class_init (TrackerSparqlConnectionClass *
  * connection with the Tracker store or databases depending on direct or
  * non-direct requests.
  */
-GType tracker_sparql_connection_get_type (void) {
+GType tracker_sparql_connection_get_type(void) {
     static volatile gsize tracker_sparql_connection_type_id__volatile = 0;
     if (g_once_init_enter (&tracker_sparql_connection_type_id__volatile)) {
-        static const GTypeInfo g_define_type_info = { sizeof (TrackerSparqlConnectionClass), (GBaseInitFunc) NULL, (GBaseFinalizeFunc) NULL, (GClassInitFunc) tracker_sparql_connection_class_init, (GClassFinalizeFunc) NULL, NULL, sizeof (TrackerSparqlConnection), 0, (GInstanceInitFunc) tracker_sparql_connection_instance_init, NULL };
+        static const GTypeInfo g_define_type_info = { sizeof (TrackerSparqlConnectionClass),
+                                                    (GBaseInitFunc) NULL,
+                                                    (GBaseFinalizeFunc) NULL,
+                                                    (GClassInitFunc) tracker_sparql_connection_class_init,
+                                                    (GClassFinalizeFunc) NULL,
+                                                    NULL,
+                                                    sizeof (TrackerSparqlConnection),
+                                                    0,
+                                                    (GInstanceInitFunc) tracker_sparql_connection_instance_init,
+                                                    NULL };
         GType tracker_sparql_connection_type_id;
-        tracker_sparql_connection_type_id = g_type_register_static (G_TYPE_OBJECT, "TrackerSparqlConnection", &g_define_type_info, G_TYPE_FLAG_ABSTRACT);
-        g_once_init_leave (&tracker_sparql_connection_type_id__volatile, tracker_sparql_connection_type_id);
+        tracker_sparql_connection_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlConnection", &g_define_type_info, (GTypeFlags) 0);
+        // tracker_sparql_connection_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlConnection", &g_define_type_info, G_TYPE_FLAG_ABSTRACT);
+        g_once_init_leave(&tracker_sparql_connection_type_id__volatile, tracker_sparql_connection_type_id);
     }
+    // printf("tracker_sparql_connection_get_type() type: %8.8x\n", tracker_sparql_connection_type_id__volatile);
     return tracker_sparql_connection_type_id__volatile;
+}
+
+TrackerSparqlConnection* tracker_sparql_connection_construct(GType object_type) {
+    TrackerSparqlConnection * self = NULL;
+    self = (TrackerSparqlConnection*) g_object_new(object_type, NULL);
+    return self;
 }
 
 static void parseResults(const QByteArray& buffer)
 {
+    // printf("Enter parseResults\n");
+    // printf("parseResults buffer: %s\n", buffer.constData());
+    variableNames.clear();
     QDomDocument doc(QLatin1String("sparqlresults"));
     if (!doc.setContent(buffer)) {
         return;
@@ -191,8 +260,10 @@ static void parseResults(const QByteArray& buffer)
                             resultNode = resultNode.nextSibling();
                         }
 
-                        (*async_cursor_next_callback)(0, async_cursor_result, async_cursor_next_user_data);
                     }
+
+                    // printf("End of results (*async_cursor_next_callback)()\n");
+                    (*async_cursor_next_callback)(0, async_cursor_result, async_cursor_next_user_data);
 
                     variableValues.clear();
                     variableDataTypes.clear();
@@ -244,7 +315,9 @@ void tracker_sparql_cursor_next_async(  TrackerSparqlCursor* self,
 
 TrackerSparqlCursor* tracker_sparql_connection_query_finish(TrackerSparqlConnection* self, GAsyncResult* _res_, GError** error)
 {
-    return (TrackerSparqlCursor*) g_object_new(TRACKER_SPARQL_TYPE_CURSOR, NULL);
+    void *result = tracker_sparql_cursor_construct(TRACKER_SPARQL_TYPE_CURSOR);
+    // printf("tracker_sparql_cursor_construct() result: %p\n", result);
+    return (TrackerSparqlCursor*) result;
 }
 
 void tracker_sparql_connection_update_finish(TrackerSparqlConnection* self, GAsyncResult* _res_, GError** error)
@@ -260,15 +333,16 @@ void tracker_sparql_connection_query_async( TrackerSparqlConnection* self,
     async_query_callback = callback;
     async_query_user_data = user_data;
 
-    QString resultsFilename = QString::fromLatin1(getenv("QSPARQL_DUMMY_RESULTS"));
+    QString resultsFilename = QString::fromLatin1(getenv("QSPARQL_DUMMY_RESULTS_INPUT"));
     QFile file(resultsFilename);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "QSPARQL_DUMMY_RESULTS environment variable: invalid file:" << resultsFilename;
+        qWarning() << "QSPARQL_DUMMY_RESULTS_INPUT environment variable: invalid file:" << resultsFilename;
         return;
     }
 
-    parseResults(file.readAll());
     (*async_query_callback)(0, async_query_result, async_query_user_data);
+    // printf("resultsFilename: %s\n", resultsFilename.toLatin1().constData());
+    parseResults(file.readAll());
 }
 
 void tracker_sparql_connection_update_async(    TrackerSparqlConnection* self,
@@ -284,5 +358,7 @@ void tracker_sparql_connection_update_async(    TrackerSparqlConnection* self,
 
 TrackerSparqlConnection* tracker_sparql_connection_get(GCancellable* cancellable, GError** error)
 {
-    return (TrackerSparqlConnection*) g_object_new(TRACKER_SPARQL_TYPE_CONNECTION, NULL);
+    void *result = tracker_sparql_connection_construct(TRACKER_SPARQL_TYPE_CONNECTION);
+    // printf("tracker_sparql_connection_get() result: %p\n", result);
+    return (TrackerSparqlConnection*) result;
 }
