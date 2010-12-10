@@ -1,6 +1,6 @@
 TEMPLATE = lib
 
-TARGET = sparql-tracker-0.9
+TARGET = tracker-sparql-0.9
 
 HEADERS += dummy_libtracker_sparql.h
 
@@ -10,3 +10,5 @@ unix: {
     LIBS *= $$QT_LFLAGS_TRACKER_DIRECT
     QMAKE_CXXFLAGS *= $$QT_CFLAGS_TRACKER_DIRECT
 }
+
+VERSION=0.999.0
