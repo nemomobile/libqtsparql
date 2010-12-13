@@ -84,7 +84,6 @@ static void tracker_sparql_cursor_finalize(GObject* obj) {
 
 static void tracker_sparql_cursor_class_init(TrackerSparqlCursorClass * klass) {
     tracker_sparql_cursor_parent_class = g_type_class_peek_parent (klass);
-    // TRACKER_SPARQL_CURSOR_CLASS (klass)->init = tracker_sparql_cursor_real_init;
     G_OBJECT_CLASS (klass)->finalize = tracker_sparql_cursor_finalize;
 }
 
@@ -103,10 +102,9 @@ GType tracker_sparql_cursor_get_type(void) {
                                                     NULL };
         GType tracker_sparql_cursor_type_id;
         tracker_sparql_cursor_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlCursor", &g_define_type_info, (GTypeFlags) 0);
-        // tracker_sparql_cursor_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlCursor", &g_define_type_info, G_TYPE_FLAG_ABSTRACT);
         g_once_init_leave(&tracker_sparql_cursor_type_id__volatile, tracker_sparql_cursor_type_id);
     }
-    // printf("tracker_sparql_cursor_get_type() type: %8.8x\n", tracker_sparql_cursor_type_id__volatile);
+
     return tracker_sparql_cursor_type_id__volatile;
 }
 
@@ -138,13 +136,6 @@ static void tracker_sparql_connection_class_init(TrackerSparqlConnectionClass * 
     G_OBJECT_CLASS (klass)->finalize = tracker_sparql_connection_finalize;
 }
 
-/**
- * TrackerSparqlConnection:
- *
- * The <structname>TrackerSparqlConnection</structname> object represents a
- * connection with the Tracker store or databases depending on direct or
- * non-direct requests.
- */
 GType tracker_sparql_connection_get_type(void) {
     static volatile gsize tracker_sparql_connection_type_id__volatile = 0;
     if (g_once_init_enter (&tracker_sparql_connection_type_id__volatile)) {
@@ -160,10 +151,9 @@ GType tracker_sparql_connection_get_type(void) {
                                                     NULL };
         GType tracker_sparql_connection_type_id;
         tracker_sparql_connection_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlConnection", &g_define_type_info, (GTypeFlags) 0);
-        // tracker_sparql_connection_type_id = g_type_register_static(G_TYPE_OBJECT, "TrackerSparqlConnection", &g_define_type_info, G_TYPE_FLAG_ABSTRACT);
         g_once_init_leave(&tracker_sparql_connection_type_id__volatile, tracker_sparql_connection_type_id);
     }
-    // printf("tracker_sparql_connection_get_type() type: %8.8x\n", tracker_sparql_connection_type_id__volatile);
+
     return tracker_sparql_connection_type_id__volatile;
 }
 
@@ -262,7 +252,6 @@ static void parseResults(const QByteArray& buffer)
 
                     }
 
-                    // printf("End of results (*async_cursor_next_callback)()\n");
                     (*async_cursor_next_callback)(0, async_cursor_result, async_cursor_next_user_data);
 
                     variableValues.clear();
