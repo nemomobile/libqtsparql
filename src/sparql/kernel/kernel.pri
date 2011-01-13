@@ -23,5 +23,5 @@ SOURCES +=      kernel/qsparqlquery.cpp \
                 kernel/qsparqlerror.cpp \
                 kernel/qsparqlntriples.cpp \
                 kernel/qsparqlresult.cpp \
-                kernel/qsparqlsynciterator.h
+                kernel/qsparqlsynciterator.cpp
 

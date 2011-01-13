@@ -47,6 +47,8 @@
 #include <QtSparql/qsparqlresultrow.h>
 #include <QtSparql/qsparqlquery.h>
 
+class QSparqlError;
+
 QT_BEGIN_HEADER
 
 QT_BEGIN_NAMESPACE
@@ -55,7 +57,7 @@ QT_MODULE(Sparql)
 
 class QSparqlSyncIteratorPrivate;
 
-class Q_SPARQL_EXPORT : public QObject
+class Q_SPARQL_EXPORT QSparqlSyncIterator : public QObject
 {
     Q_OBJECT
 
@@ -70,8 +72,6 @@ public:
     bool hasError() const;
     QSparqlError lastError() const;
 
-    QString query() const;
-
 protected:
     QSparqlSyncIterator();
 
@@ -79,6 +79,9 @@ protected:
 
 private:
     QScopedPointer<QSparqlSyncIteratorPrivate> d;
+
+private:
+    Q_DISABLE_COPY(QSparqlSyncIterator)
 };
 
 QT_END_NAMESPACE

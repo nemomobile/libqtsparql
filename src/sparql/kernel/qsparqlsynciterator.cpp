@@ -40,3 +40,43 @@
 ****************************************************************************/
 
 #include "qsparqlsynciterator.h"
+
+#include "qsparqlerror.h"
+
+QT_BEGIN_NAMESPACE
+
+class QSparqlSyncIteratorPrivate
+{
+public:
+    QSparqlSyncIteratorPrivate()
+        : statementType(QSparqlQuery::SelectStatement)
+    {}
+    QSparqlQuery::StatementType statementType;
+    QSparqlError error;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+QSparqlSyncIterator::QSparqlSyncIterator()
+    : d(new QSparqlSyncIteratorPrivate)
+{
+}
+
+QSparqlSyncIterator::~QSparqlSyncIterator()
+{
+}
+
+bool QSparqlSyncIterator::hasError() const
+{
+    return d->error.isValid();
+}
+
+QSparqlError QSparqlSyncIterator::lastError() const
+{
+    return d->error;
+}
+
+void QSparqlSyncIterator::setLastError(const QSparqlError &error)
+{
+    d->error = error;
+}
