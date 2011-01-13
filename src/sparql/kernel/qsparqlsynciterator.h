@@ -68,6 +68,7 @@ public:
 
     virtual int count() const;
     virtual QVariant value(int i) const;
+    virtual QString stringValue(int i) const;
 
     bool hasError() const;
     QSparqlError lastError() const;

@@ -529,6 +529,12 @@ QTrackerDirectSyncIterator::value(int i) const
     return binding.value();
 }
 
+QString
+QTrackerDirectSyncIterator::stringValue(int i) const
+{
+    return QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
+}
+
 void
 QTrackerDirectSyncIterator::syncExec(const QString &query, QSparqlQuery::StatementType type)
 {

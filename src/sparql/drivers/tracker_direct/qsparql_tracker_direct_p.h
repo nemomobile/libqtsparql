@@ -111,6 +111,7 @@ public:
 
     int count() const;
     QVariant value(int i) const;
+    QString stringValue(int i) const;
 
     void syncExec(const QString &query, QSparqlQuery::StatementType type);
 

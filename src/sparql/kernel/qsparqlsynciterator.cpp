@@ -85,6 +85,11 @@ QVariant QSparqlSyncIterator::value(int) const
     return QVariant();
 }
 
+QString QSparqlSyncIterator::stringValue(int i) const
+{
+    return value(i).toString();
+}
+
 bool QSparqlSyncIterator::hasError() const
 {
     return d->error.isValid();
