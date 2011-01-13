@@ -66,6 +66,24 @@ QSparqlSyncIterator::~QSparqlSyncIterator()
 {
 }
 
+bool QSparqlSyncIterator::next()
+{
+    // Dummy empty implementation, override in subclasses.
+    return false;
+}
+
+QSparqlResultRow QSparqlSyncIterator::current() const
+{
+    // Dummy empty implementation, override in subclasses.
+    return QSparqlResultRow();
+}
+
+QVariant QSparqlSyncIterator::value(int) const
+{
+    // Dummy empty implementation, override in subclasses.
+    return QVariant();
+}
+
 bool QSparqlSyncIterator::hasError() const
 {
     return d->error.isValid();

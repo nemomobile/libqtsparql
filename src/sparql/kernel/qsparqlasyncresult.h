@@ -63,8 +63,9 @@ public:
     virtual ~QSparqlAsyncResult();
 
     // Accessing the data
-    virtual QVariant value(int row, int col) const = 0;
-    virtual QSparqlBinding binding(int row, int col) const = 0;
+    virtual QVariant value(int row, int col) const;
+    virtual QSparqlBinding binding(int row, int col) const;
+    virtual int size() const;
 
     bool isTable() const;
     bool isGraph() const;
@@ -72,8 +73,6 @@ public:
 
     // For ASK results
     bool boolValue() const;
-
-    virtual int size() const = 0;
 
     virtual void waitForFinished();
     virtual bool isFinished() const;
@@ -96,6 +95,7 @@ protected:
 
 private:
     QScopedPointer<QSparqlAsyncResultPrivate> d;
+    friend class QSparqlConnection; // or make setLastError public
 };
 
 QT_END_NAMESPACE

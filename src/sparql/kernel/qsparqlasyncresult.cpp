@@ -126,6 +126,24 @@ void QSparqlAsyncResult::setStatementType(QSparqlQuery::StatementType type)
     d->statementType = type;
 }
 
+QVariant QSparqlAsyncResult::value(int, int) const
+{
+    // Dummy empty implementation, override in subclasses.
+    return QVariant();
+}
+
+QSparqlBinding QSparqlAsyncResult::binding(int, int) const
+{
+    // Dummy empty implementation, override in subclasses.
+    return QSparqlBinding();
+}
+
+int QSparqlAsyncResult::size() const
+{
+    // Dummy empty implementation, override in subclasses.
+    return 0;
+}
+
 /// Returns true if this QSparqlAsyncResult object represents results that are in the
 /// tabular format, e.g., the results of a SELECT query.
 bool QSparqlAsyncResult::isTable() const

@@ -64,10 +64,10 @@ class Q_SPARQL_EXPORT QSparqlSyncIterator : public QObject
 public:
     virtual ~QSparqlSyncIterator();
 
-    virtual bool next() = 0;
+    virtual bool next();
 
-    virtual QSparqlResultRow current() const = 0;
-    virtual QVariant value(int i) = 0;
+    virtual QSparqlResultRow current() const;
+    virtual QVariant value(int i) const;
 
     bool hasError() const;
     QSparqlError lastError() const;
@@ -79,6 +79,7 @@ protected:
 
 private:
     QScopedPointer<QSparqlSyncIteratorPrivate> d;
+    friend class QSparqlConnection; // or make setLastError public
 
 private:
     Q_DISABLE_COPY(QSparqlSyncIterator)

@@ -59,6 +59,8 @@
 #include "qdebug.h"
 #include "qcoreapplication.h"
 #include "qsparqlresult.h"
+#include "qsparqlasyncresult.h"
+#include "qsparqlsynciterator.h"
 #include "qsparqlconnectionoptions.h"
 #include "qsparqldriver_p.h"
 #include "qsparqldriverplugin_p.h"
@@ -397,6 +399,7 @@ QSparqlConnection::~QSparqlConnection()
 // finished() signal when the main loop is entered the next time,
 // so that the user has a change to connect to it?
 
+// Deprecated
 QSparqlResult* QSparqlConnection::exec(const QSparqlQuery& query)
 {
     QSparqlResult * result;
@@ -424,6 +427,85 @@ QSparqlResult* QSparqlConnection::exec(const QSparqlQuery& query)
         }
     }
 
+    result->setParent(this);
+    return result;
+}
+
+QSparqlAsyncResult* QSparqlConnection::asyncExec(const QSparqlQuery& query)
+{
+    QString queryText = query.preparedQueryText();
+    QSparqlAsyncResult* result;
+
+    // TODO: error checking code is a bit duplicate
+    if (d->driver->isOpenError()) {
+        qWarning("QSparqlConnection::exec: connection not open");
+
+        result = new QSparqlAsyncResult();
+        result->setLastError(d->driver->lastError());
+    }
+    else if (!d->driver->isOpen()) {
+        qWarning("QSparqlConnection::exec: connection not open");
+
+        result = new QSparqlAsyncResult();
+        result->setLastError(QSparqlError(QLatin1String("Connection not open"),
+                                          QSparqlError::ConnectionError));
+    }
+    else if (queryText.isEmpty()) {
+        qWarning("QSparqlConnection::exec: empty query");
+        result = new QSparqlAsyncResult();
+        result->setLastError(QSparqlError(QLatin1String("Query is empty"),
+                                          QSparqlError::ConnectionError));
+    }
+    else {
+        // Real work
+        QString queryText = query.preparedQueryText();
+        if (d->driver->hasFeature(QSparqlConnection::AsyncExec)) {
+            result = d->driver->asyncExec(queryText, query.type());
+        }
+        else {
+            // TODO:
+            //result = new SyncToAsyncWrapper(d->driver->syncExec(queryText, query.type));
+        }
+    }
+
+    result->setParent(this);
+    return result;
+}
+
+QSparqlSyncIterator* QSparqlConnection::syncExec(const QSparqlQuery& query)
+{
+    QString queryText = query.preparedQueryText();
+    QSparqlSyncIterator* result;
+
+    if (d->driver->isOpenError()) {
+        qWarning("QSparqlConnection::exec: connection not open");
+
+        result = new QSparqlSyncIterator();
+        result->setLastError(d->driver->lastError());
+    }
+    else if (!d->driver->isOpen()) {
+        qWarning("QSparqlConnection::exec: connection not open");
+
+        result = new QSparqlSyncIterator();
+        result->setLastError(QSparqlError(QLatin1String("Connection not open"),
+                                          QSparqlError::ConnectionError));
+    }
+    else if (queryText.isEmpty()) {
+        qWarning("QSparqlConnection::exec: empty query");
+        result = new QSparqlSyncIterator();
+        result->setLastError(QSparqlError(QLatin1String("Query is empty"),
+                                          QSparqlError::ConnectionError));
+    }
+    else {
+        QString queryText = query.preparedQueryText();
+        if (d->driver->hasFeature(QSparqlConnection::SyncExec)) {
+            result = d->driver->syncExec(queryText, query.type());
+        }
+        else {
+            // TODO:
+            //result = new AsyncToSyncWrapper(d->driver->syncExec(queryText, query.type));
+        }
+    }
     result->setParent(this);
     return result;
 }

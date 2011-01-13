@@ -57,13 +57,16 @@ class QSparqlError;
 class QSparqlQuery;
 class QSparqlResult;
 class QSparqlConnectionPrivate;
+class QSparqlAsyncResult;
+class QSparqlSyncIterator;
 
 class Q_SPARQL_EXPORT QSparqlConnection : public QObject
 {
     Q_OBJECT
 public:
     enum Feature {  QuerySize, DefaultGraph,
-                    AskQueries, ConstructQueries, UpdateQueries };
+                    AskQueries, ConstructQueries, UpdateQueries,
+                    SyncExec, AsyncExec};
 
     explicit QSparqlConnection(QObject* parent = 0);
     QSparqlConnection(const QString& type,
@@ -71,7 +74,12 @@ public:
                       QObject* parent = 0);
     ~QSparqlConnection();
 
+    // Deprecated
     QSparqlResult* exec(const QSparqlQuery& query);
+
+    QSparqlSyncIterator* syncExec(const QSparqlQuery& query);
+    QSparqlAsyncResult* asyncExec(const QSparqlQuery& query);
+
     bool isValid() const;
     QString driverName() const;
     bool hasFeature(Feature feature) const;
