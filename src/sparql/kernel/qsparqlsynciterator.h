@@ -39,19 +39,13 @@
 **
 ****************************************************************************/
 
-// TODO: publish this header file when the Driver interface has stabilized
-#ifndef QSPARQLDRIVER_H
-#define QSPARQLDRIVER_H
+#ifndef QSPARQLSYNCITERATOR_H
+#define QSPARQLSYNCITERATOR_H
 
-#include <QtCore/qurl.h>
+#include <QtCore/qvariant.h>
 #include <QtCore/qobject.h>
-#include <QtCore/qstring.h>
-#include <QtCore/qstringlist.h>
-
-#include <QtSparql/qsparqlconnection.h>
-#include <QtSparql/qsparqlconnectionoptions.h>
+#include <QtSparql/qsparqlresultrow.h>
 #include <QtSparql/qsparqlquery.h>
-
 
 QT_BEGIN_HEADER
 
@@ -59,52 +53,36 @@ QT_BEGIN_NAMESPACE
 
 QT_MODULE(Sparql)
 
-class QSparqlDriverPrivate;
-class QSparqlError;
-class QSparqlResult;
-class QSparqlSyncIterator;
-class QVariant;
+class QSparqlSyncIteratorPrivate;
 
-class Q_SPARQL_EXPORT QSparqlDriver : public QObject
+class Q_SPARQL_EXPORT : public QObject
 {
     Q_OBJECT
-    friend class QSparqlConnection;
+
 public:
-    explicit QSparqlDriver(QObject *parent=0);
-    ~QSparqlDriver();
-    virtual bool isOpen() const;
-    bool isOpenError() const;
+    virtual ~QSparqlSyncIterator();
 
-    virtual bool beginTransaction();
-    virtual bool commitTransaction();
-    virtual bool rollbackTransaction();
+    virtual bool next() = 0;
 
+    virtual QSparqlResultRow current() const = 0;
+    virtual QVariant value(int i) = 0;
+
+    bool hasError() const;
     QSparqlError lastError() const;
 
-    virtual QVariant handle() const;
-    virtual bool hasFeature(QSparqlConnection::Feature f) const = 0;
-    virtual void close() = 0;
-    virtual QSparqlResult* exec(const QString& query, QSparqlQuery::StatementType) = 0;
-    virtual QSparqlSyncIterator* syncExec(const QString &query, QSparqlQuery::StatementType) = 0;
-
-    virtual bool open(const QSparqlConnectionOptions& options = QSparqlConnectionOptions()) = 0;
-
-    void addPrefix(const QString& prefix, const QUrl& uri);
-    QString prefixes() const;
-    void clearPrefixes();
+    QString query() const;
 
 protected:
-    virtual void setOpen(bool o);
-    virtual void setOpenError(bool e);
+    QSparqlSyncIterator();
+
     virtual void setLastError(const QSparqlError& e);
 
 private:
-    Q_DISABLE_COPY(QSparqlDriver)
-    QSparqlDriverPrivate* d;
+    QScopedPointer<QSparqlSyncIteratorPrivate> d;
 };
 
 QT_END_NAMESPACE
 
 QT_END_HEADER
 
-#endif // QSPARQLDRIVER_H
+#endif // QSPARQLSYNCITERATOR_H
