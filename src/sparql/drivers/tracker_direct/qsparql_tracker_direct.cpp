@@ -72,6 +72,41 @@ Q_GLOBAL_STATIC_WITH_ARGS(QUrl, Integer,
                           (QLatin1String("http://www.w3.org/2001/XMLSchema#integer")))
 }
 
+static void
+setBindingValue(const QString &value, TrackerSparqlValueType type, QSparqlBinding &binding)
+{
+    switch (type) {
+    case TRACKER_SPARQL_VALUE_TYPE_UNBOUND:
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_URI:
+        binding.setValue(QUrl(value));
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_STRING:
+        binding.setValue(value);
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_INTEGER:
+        binding.setValue(value, *XSD::Integer());
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_DOUBLE:
+        binding.setValue(value, *XSD::Double());
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_DATETIME:
+        binding.setValue(value, *XSD::DateTime());
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_BLANK_NODE:
+        binding.setBlankNodeLabel(value);
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_BOOLEAN:
+        if (value == QLatin1String("1") || value.toLower() == QLatin1String("true"))
+            binding.setValue(QString::fromLatin1("true"), *XSD::Boolean());
+        else
+            binding.setValue(QString::fromLatin1("false"), *XSD::Boolean());
+        break;
+    default:
+        break;
+    }
+}
+
 class QTrackerDirectFetcherPrivate : public QThread
 {
 public:
@@ -314,36 +349,7 @@ bool QTrackerDirectResult::fetchNextResult()
         binding.setName(d->columnNames[i]);
         TrackerSparqlValueType type = tracker_sparql_cursor_get_value_type(d->cursor, i);
 
-        switch (type) {
-        case TRACKER_SPARQL_VALUE_TYPE_UNBOUND:
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_URI:
-            binding.setValue(QUrl(value));
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_STRING:
-            binding.setValue(value);
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_INTEGER:
-            binding.setValue(value, *XSD::Integer());
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_DOUBLE:
-            binding.setValue(value, *XSD::Double());
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_DATETIME:
-            binding.setValue(value, *XSD::DateTime());
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_BLANK_NODE:
-            binding.setBlankNodeLabel(value);
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_BOOLEAN:
-            if (value == QLatin1String("1") || value.toLower() == QLatin1String("true"))
-                binding.setValue(QString::fromLatin1("true"), *XSD::Boolean());
-            else
-                binding.setValue(QString::fromLatin1("false"), *XSD::Boolean());
-            break;
-        default:
-            break;
-        }
+        setBindingValue(value, type, binding);
 
         resultRow.append(binding);
     }
@@ -459,6 +465,99 @@ QSparqlResultRow QTrackerDirectResult::current() const
     return d->results[pos()];
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+class QTrackerDirectSyncIteratorPrivate
+{
+public:
+    ~QTrackerDirectSyncIteratorPrivate();
+    QTrackerDirectDriverPrivate *p;
+    TrackerSparqlCursor *cursor;
+    QSparqlResultRow row;
+};
+
+QTrackerDirectSyncIteratorPrivate::~QTrackerDirectSyncIteratorPrivate()
+{
+    if (cursor) {
+        g_object_unref(cursor);
+    }
+}
+
+QTrackerDirectSyncIterator::QTrackerDirectSyncIterator(QTrackerDirectDriverPrivate *p)
+    : d(new QTrackerDirectSyncIteratorPrivate)
+{
+    d->p = p;
+    d->cursor = 0;
+}
+
+QTrackerDirectSyncIterator::~QTrackerDirectSyncIterator()
+{
+}
+
+bool
+QTrackerDirectSyncIterator::next()
+{
+    GError *error = 0;
+
+    bool result = tracker_sparql_cursor_next(d->cursor, 0, &error);
+
+    if (error) {
+        QSparqlError e(QString::fromUtf8(error->message));
+        e.setType(QSparqlError::StatementError);
+        setLastError(e);
+        g_error_free(error);
+
+        return false;
+    }
+
+    d->row = QSparqlResultRow();
+
+    for (int i = 0; i < tracker_sparql_cursor_get_n_columns(d->cursor); ++i) {
+        QSparqlBinding binding(QString::fromUtf8(tracker_sparql_cursor_get_variable_name(d->cursor,
+                                                                                         i)));
+
+        setBindingValue(QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0)),
+                        tracker_sparql_cursor_get_value_type(d->cursor, i),
+                        binding);
+
+        d->row.append(binding);
+    }
+
+    return result;
+}
+
+QSparqlResultRow
+QTrackerDirectSyncIterator::current() const
+{
+    return d->row;
+}
+
+QVariant
+QTrackerDirectSyncIterator::value(int i) const
+{
+    return d->row.value(i);
+}
+
+void
+QTrackerDirectSyncIterator::syncExec(const QString &query, QSparqlQuery::StatementType type)
+{
+    GError *error = 0;
+
+    d->cursor = tracker_sparql_connection_query(d->p->connection,
+                                                query.toUtf8().constData(),
+                                                0,
+                                                &error);
+
+    if (error) {
+        QSparqlError e(QString::fromUtf8(error->message));
+        e.setType(QSparqlError::StatementError);
+        setLastError(e);
+        g_error_free(error);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 QTrackerDirectDriverPrivate::QTrackerDirectDriverPrivate()
     : dataReadyInterval(1), mutex(QMutex::Recursive)
 {
@@ -494,6 +593,8 @@ bool QTrackerDirectDriver::hasFeature(QSparqlConnection::Feature f) const
     case QSparqlConnection::UpdateQueries:
         return true;
     case QSparqlConnection::DefaultGraph:
+        return true;
+    case QSparqlConnection::SyncExec:
         return true;
     }
     return false;
@@ -535,6 +636,14 @@ void QTrackerDirectDriver::close()
         setOpen(false);
         setOpenError(false);
     }
+}
+
+QSparqlSyncIterator*
+QTrackerDirectDriver::syncExec(const QString &query, QSparqlQuery::StatementType type)
+{
+    QTrackerDirectSyncIterator* res = new QTrackerDirectSyncIterator(d);
+    res->syncExec(query, type);
+    return res;
 }
 
 QT_END_NAMESPACE

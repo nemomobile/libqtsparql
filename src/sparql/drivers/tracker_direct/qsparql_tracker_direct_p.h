@@ -44,6 +44,7 @@
 
 #include <QtSparql/private/qsparqldriver_p.h>
 #include <QtSparql/qsparqlresult.h>
+#include <QtSparql/qsparqlsynciterator.h>
 #include <QtSparql/qsparqlquery.h>
 
 #include <QtDBus/QtDBus>
@@ -64,6 +65,7 @@ QT_BEGIN_NAMESPACE
 
 class QTrackerDirectDriverPrivate;
 class QTrackerDirectResultPrivate;
+class QTrackerDirectSyncIteratorPrivate;
 class QTrackerDirectDriver;
 
 class Q_EXPORT_SPARQLDRIVER_TRACKER_DIRECT QTrackerDirectResult : public QSparqlResult
@@ -98,6 +100,24 @@ private:
     friend class QTrackerDirectFetcherPrivate;
 };
 
+class Q_EXPORT_SPARQLDRIVER_TRACKER_DIRECT QTrackerDirectSyncIterator : public QSparqlSyncIterator
+{
+
+public:
+    explicit QTrackerDirectSyncIterator(QTrackerDirectDriverPrivate *p);
+    ~QTrackerDirectSyncIterator();
+
+    bool next();
+
+    QSparqlResultRow current() const;
+    QVariant value(int i) const;
+
+    void syncExec(const QString &query, QSparqlQuery::StatementType type);
+
+private:
+    QScopedPointer<QTrackerDirectSyncIteratorPrivate> d;
+};
+
 class Q_EXPORT_SPARQLDRIVER_TRACKER_DIRECT QTrackerDirectDriver : public QSparqlDriver
 {
     Q_OBJECT
@@ -111,6 +131,7 @@ public:
     void close();
     QTrackerDirectResult* exec(const QString& query,
                          QSparqlQuery::StatementType type);
+    QSparqlSyncIterator* syncExec(const QString &query, QSparqlQuery::StatementType type);
 private:
     QTrackerDirectDriverPrivate* d;
 };

@@ -500,8 +500,15 @@ QSparqlSyncIterator* QSparqlConnection::syncExec(const QSparqlQuery& query)
         QString queryText = query.preparedQueryText();
         if (d->driver->hasFeature(QSparqlConnection::SyncExec)) {
             result = d->driver->syncExec(queryText, query.type());
+
+            if (result == 0) {
+                qWarning("Null iterator returned");
+                return new QSparqlSyncIterator();
+            }
         }
         else {
+            qWarning("SyncExec feature not supported");
+            return new QSparqlSyncIterator();
             // TODO:
             //result = new AsyncToSyncWrapper(d->driver->syncExec(queryText, query.type));
         }

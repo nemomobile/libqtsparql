@@ -70,6 +70,8 @@ private slots:
 
     void iterate_result();
 
+    void iterate_result_sync();
+
     void delete_unfinished_result();
     void delete_partially_iterated_result();
 
@@ -368,6 +370,46 @@ void tst_QSparqlTrackerDirect::iterate_result()
     QCOMPARE(r->current(), QSparqlResultRow());
 
     delete r;
+}
+
+void tst_QSparqlTrackerDirect::iterate_result_sync()
+{
+    // This test will print out warnings
+    testLogLevel = QtCriticalMsg;
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlSyncIterator* it = conn.syncExec(q);
+    QVERIFY(it != 0);
+    QCOMPARE(it->hasError(), false);
+
+    // This is not a valid position
+    for (int i=-1; i <= 2; ++i) {
+        QVERIFY(it->value(i).isNull());
+    }
+    QCOMPARE(it->current(), QSparqlResultRow());
+
+    int i;
+
+    for (i=0; i<3; ++i) {
+        QVERIFY(it->next());
+
+        QVERIFY(it->value(-1).isNull());
+        QVERIFY(it->value(0).isNull() == false);
+        QVERIFY(it->value(1).isNull() == false);
+        QVERIFY(it->value(2).isNull());
+    }
+    QVERIFY(!it->next());
+    // This is not a valid position
+    for (int i=-1; i <= 2; ++i) {
+        QVERIFY(it->value(i).isNull());
+    }
+    QCOMPARE(it->current(), QSparqlResultRow());
+
+    QCOMPARE(i, 3);
+
+    delete it;
 }
 
 void tst_QSparqlTrackerDirect::delete_unfinished_result()
