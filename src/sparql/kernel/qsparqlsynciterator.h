@@ -66,7 +66,7 @@ public:
 
     virtual bool next();
 
-    virtual QSparqlResultRow current() const;
+    virtual int count() const;
     virtual QVariant value(int i) const;
 
     bool hasError() const;

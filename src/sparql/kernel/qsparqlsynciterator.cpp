@@ -72,10 +72,11 @@ bool QSparqlSyncIterator::next()
     return false;
 }
 
-QSparqlResultRow QSparqlSyncIterator::current() const
+int
+QSparqlSyncIterator::count() const
 {
     // Dummy empty implementation, override in subclasses.
-    return QSparqlResultRow();
+    return -1;
 }
 
 QVariant QSparqlSyncIterator::value(int) const

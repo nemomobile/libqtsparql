@@ -473,7 +473,6 @@ public:
     ~QTrackerDirectSyncIteratorPrivate();
     QTrackerDirectDriverPrivate *p;
     TrackerSparqlCursor *cursor;
-    QSparqlResultRow row;
 };
 
 QTrackerDirectSyncIteratorPrivate::~QTrackerDirectSyncIteratorPrivate()
@@ -510,32 +509,24 @@ QTrackerDirectSyncIterator::next()
         return false;
     }
 
-    d->row = QSparqlResultRow();
-
-    for (int i = 0; i < tracker_sparql_cursor_get_n_columns(d->cursor); ++i) {
-        QSparqlBinding binding(QString::fromUtf8(tracker_sparql_cursor_get_variable_name(d->cursor,
-                                                                                         i)));
-
-        setBindingValue(QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0)),
-                        tracker_sparql_cursor_get_value_type(d->cursor, i),
-                        binding);
-
-        d->row.append(binding);
-    }
-
     return result;
 }
 
-QSparqlResultRow
-QTrackerDirectSyncIterator::current() const
+int
+QTrackerDirectSyncIterator::count() const
 {
-    return d->row;
+    return tracker_sparql_cursor_get_n_columns(d->cursor);
 }
 
 QVariant
 QTrackerDirectSyncIterator::value(int i) const
 {
-    return d->row.value(i);
+    QSparqlBinding binding;
+    setBindingValue(QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0)),
+                    tracker_sparql_cursor_get_value_type(d->cursor, i),
+                    binding);
+
+    return binding.value();
 }
 
 void

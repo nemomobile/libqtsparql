@@ -109,7 +109,7 @@ public:
 
     bool next();
 
-    QSparqlResultRow current() const;
+    int count() const;
     QVariant value(int i) const;
 
     void syncExec(const QString &query, QSparqlQuery::StatementType type);

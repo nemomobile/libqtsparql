@@ -384,11 +384,12 @@ void tst_QSparqlTrackerDirect::iterate_result_sync()
     QVERIFY(it != 0);
     QCOMPARE(it->hasError(), false);
 
+    QCOMPARE(it->count(), 3);
+
     // This is not a valid position
     for (int i=-1; i <= 2; ++i) {
         QVERIFY(it->value(i).isNull());
     }
-    QCOMPARE(it->current(), QSparqlResultRow());
 
     int i;
 
@@ -405,7 +406,6 @@ void tst_QSparqlTrackerDirect::iterate_result_sync()
     for (int i=-1; i <= 2; ++i) {
         QVERIFY(it->value(i).isNull());
     }
-    QCOMPARE(it->current(), QSparqlResultRow());
 
     QCOMPARE(i, 3);
 
