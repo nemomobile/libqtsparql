@@ -73,6 +73,7 @@
 # include "qpluginloader.h"
 #endif
 #include "qsparqlnulldriver_p.h"
+#include "qsparqlwrappers_p.h"
 
 #include <QtCore/qhash.h>
 #include <QtCore/quuid.h>
@@ -463,8 +464,8 @@ QSparqlAsyncResult* QSparqlConnection::asyncExec(const QSparqlQuery& query)
             result = d->driver->asyncExec(queryText, query.type());
         }
         else {
-            // TODO:
-            //result = new SyncToAsyncWrapper(d->driver->syncExec(queryText, query.type));
+            result = new QSparqlAsyncWrapper(
+                d->driver->syncExec(queryText, query.type()));
         }
     }
 

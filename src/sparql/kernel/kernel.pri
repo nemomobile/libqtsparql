@@ -12,7 +12,8 @@ HEADERS +=      kernel/qsparql.h \
                 kernel/qsparqlntriples_p.h \
                 kernel/qsparqlresult.h \
                 kernel/qsparqlsynciterator.h \
-                kernel/qsparqlasyncresult.h
+                kernel/qsparqlasyncresult.h \
+                kernel/qsparqlwrappers_p.h
 
 SOURCES +=      kernel/qsparqlquery.cpp \
                 kernel/qsparqlconnection.cpp \
@@ -25,5 +26,6 @@ SOURCES +=      kernel/qsparqlquery.cpp \
                 kernel/qsparqlntriples.cpp \
                 kernel/qsparqlresult.cpp \
                 kernel/qsparqlsynciterator.cpp \
-                kernel/qsparqlasyncresult.cpp
+                kernel/qsparqlasyncresult.cpp \
+                kernel/qsparqlwrappers.cpp
 
