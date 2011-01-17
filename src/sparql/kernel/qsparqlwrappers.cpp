@@ -66,6 +66,7 @@ class QSparqlAsyncWrapperPrivate
 {
 public:
     QSparqlAsyncWrapperPrivate(QSparqlSyncIterator* backend,
+                               int dataReadyInterval,
                                QSparqlAsyncWrapper* p);
     ~QSparqlAsyncWrapperPrivate();
 
@@ -73,6 +74,7 @@ public:
     void fetchBoolResult();
     void terminate();
     QScopedPointer<QSparqlSyncIterator> backend;
+    int dataReadyInterval;
     QSparqlAsyncWrapper* q;
     QMutex resultMutex;
     QVector<QSparqlResultRow> results;
@@ -96,9 +98,10 @@ void FetcherThread::run()
     setTerminationEnabled(true);
 }
 
-QSparqlAsyncWrapperPrivate::QSparqlAsyncWrapperPrivate(QSparqlSyncIterator* backend,
-                                                       QSparqlAsyncWrapper* q)
+QSparqlAsyncWrapperPrivate::QSparqlAsyncWrapperPrivate(
+    QSparqlSyncIterator* backend, int dataReadyInterval, QSparqlAsyncWrapper* q)
     : backend(backend), // will take the ownership
+      dataReadyInterval(dataReadyInterval),
       q(q),
       fetcher(q),
       isFinished(false)
@@ -128,6 +131,11 @@ bool QSparqlAsyncWrapperPrivate::fetchNextResult()
             resultRow.append(binding);
         }
         results.append(resultRow);
+
+        if (results.size() % dataReadyInterval == 0) {
+            emit q->dataReady(results.size());
+        }
+
         return true;
     }
     else {
@@ -149,12 +157,18 @@ void QSparqlAsyncWrapperPrivate::fetchBoolResult()
 
 void QSparqlAsyncWrapperPrivate::terminate()
 {
+    if (results.size() % dataReadyInterval != 0) {
+        // If it is 0, dataReady has already been emitted once
+        emit q->dataReady(results.size());
+    }
+
     isFinished = true;
     emit q->finished();
 }
 
-QSparqlAsyncWrapper::QSparqlAsyncWrapper(QSparqlSyncIterator* backend)
-    : d(new QSparqlAsyncWrapperPrivate(backend, this))
+QSparqlAsyncWrapper::QSparqlAsyncWrapper(QSparqlSyncIterator* backend,
+                                         int dataReadyInterval)
+    : d(new QSparqlAsyncWrapperPrivate(backend, dataReadyInterval, this))
 {
 }
 

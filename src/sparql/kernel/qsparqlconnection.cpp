@@ -465,7 +465,8 @@ QSparqlAsyncResult* QSparqlConnection::asyncExec(const QSparqlQuery& query)
         }
         else {
             result = new QSparqlAsyncWrapper(
-                d->driver->syncExec(queryText, query.type()));
+                d->driver->syncExec(queryText, query.type()),
+                d->options.dataReadyInterval());
         }
     }
 

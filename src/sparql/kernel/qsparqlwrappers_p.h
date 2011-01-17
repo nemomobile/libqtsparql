@@ -55,7 +55,8 @@ class QSparqlAsyncWrapper : public QSparqlAsyncResult
 {
     Q_OBJECT
 public:
-    explicit QSparqlAsyncWrapper(QSparqlSyncIterator* backend);
+    explicit QSparqlAsyncWrapper(QSparqlSyncIterator* backend,
+                                 int dataReadyInterval);
     ~QSparqlAsyncWrapper();
     virtual QVariant value(int row, int col) const;
     virtual QSparqlBinding binding(int row, int col) const;
