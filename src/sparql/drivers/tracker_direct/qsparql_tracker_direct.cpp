@@ -122,6 +122,7 @@ public:
     ~QTrackerDirectResultPrivate();
     int resultsCount();
     int resultsPos();
+    void setFreeResults();
     void terminate();
     void setLastError(const QSparqlError& e);
     void setBoolValue(bool v);
@@ -130,9 +131,14 @@ public:
     TrackerSparqlCursor * cursor;
     QVector<QString> columnNames;
     QList<QSparqlResultRow> results;
-    // A count of the number of results deleted. Normally zero, and
-    // only used by the dataReadyBufferSize option
+
+    // These two fields are only used by the dataReadyBufferSize option
+    //  - resultsBase: count of the number of results deleted
+    //  - freeResults: number of free entries in the results buffer,
+    //      and the fetcher thread will wait until it is at least 1
     int resultsBase;
+    QSemaphore freeResults;
+
     bool isFinished;
     bool resultAlive; // whether the corresponding Result object is still alive
 
@@ -174,12 +180,18 @@ QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
 
 int QTrackerDirectResultPrivate::resultsCount()
 {
-    return resultsBase + resultsCount();
+    return resultsBase + results.count();
 }
 
 int QTrackerDirectResultPrivate::resultsPos()
 {
     return q->pos() - resultsBase;
+}
+
+void QTrackerDirectResultPrivate::setFreeResults()
+{
+    if (driverPrivate->dataReadyBufferSize > 0)
+        freeResults.release(driverPrivate->dataReadyBufferSize - resultsPos() - 1);
 }
 
 void QTrackerDirectResultPrivate::terminate()
@@ -315,7 +327,17 @@ bool QTrackerDirectResult::fetchNextResult()
         return false;
     }
 
-    QMutexLocker resultLocker(&(d->mutex));
+    if (d->driverPrivate->dataReadyBufferSize > 0) {
+        d->freeResults.acquire(1);
+        QMutexLocker resultLocker(&(d->mutex));
+
+        if ((d->results.count() + 1) > d->driverPrivate->dataReadyBufferSize) {
+            d->results.removeFirst();
+            d->resultsBase++;
+        }
+    } else {
+        QMutexLocker resultLocker(&(d->mutex));
+    }
 
     QSparqlResultRow resultRow;
     gint n_columns = tracker_sparql_cursor_get_n_columns(d->cursor);
@@ -366,13 +388,6 @@ bool QTrackerDirectResult::fetchNextResult()
         resultRow.append(binding);
     }
 
-    if (    d->driverPrivate->dataReadyBufferSize > 0
-            && (d->results.count() + 1) > d->driverPrivate->dataReadyBufferSize)
-    {
-        d->results.removeFirst();
-        d->resultsBase++;
-    }
-
     d->results.append(resultRow);
     if (d->resultsCount() % d->driverPrivate->dataReadyInterval == 0) {
         d->dataReady(d->resultsCount());
@@ -416,6 +431,7 @@ bool QTrackerDirectResult::fetchBoolResult()
 
 QSparqlBinding QTrackerDirectResult::binding(int field) const
 {
+    d->setFreeResults();
     QMutexLocker resultLocker(&(d->mutex));
 
     if (!isValid()) {
@@ -432,6 +448,7 @@ QSparqlBinding QTrackerDirectResult::binding(int field) const
 
 QVariant QTrackerDirectResult::value(int field) const
 {
+    d->setFreeResults();
     QMutexLocker resultLocker(&(d->mutex));
 
     if (!isValid()) {
@@ -472,6 +489,7 @@ int QTrackerDirectResult::size() const
 
 QSparqlResultRow QTrackerDirectResult::current() const
 {
+    d->setFreeResults();
     QMutexLocker resultLocker(&(d->mutex));
 
     if (!isValid()) {
