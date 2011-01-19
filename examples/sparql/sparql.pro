@@ -3,6 +3,7 @@ TEMPLATE      = subdirs
 SUBDIRS       = simple \
                 dbpedia \
                 qmlquerymodel \
+                qmltracker \
                 querymodel \
                 iteration \
                 asynctracker \

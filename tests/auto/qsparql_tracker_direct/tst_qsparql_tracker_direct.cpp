@@ -62,8 +62,10 @@ public slots:
 
 private slots:
     void query_contacts();
+    void query_contacts_async();
     void ask_contacts();
     void insert_and_delete_contact();
+    void insert_and_delete_contact_async();
     void insert_new_urn();
 
     void query_with_error();
@@ -72,6 +74,7 @@ private slots:
 
     void delete_unfinished_result();
     void delete_partially_iterated_result();
+    void delete_nearly_finished_result();
 
     void concurrent_queries();
     void concurrent_queries_2();
@@ -83,6 +86,9 @@ private slots:
     void result_type_bool();
 
     void special_chars();
+
+    void result_immediately_finished();
+    void result_immediately_finished2();
 };
 
 namespace {
@@ -149,6 +155,37 @@ void tst_QSparqlTrackerDirect::query_contacts()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
+    QHash<QString, QString> contactNames;
+    while (r->next()) {
+        QCOMPARE(r->current().count(), 2);
+        contactNames[r->value(0).toString()] = r->value(1).toString();
+    }
+    QCOMPARE(contactNames.size(), 3);
+    QCOMPARE(contactNames["uri001"], QString("name001"));
+    QCOMPARE(contactNames["uri002"], QString("name002"));
+    QCOMPARE(contactNames["uri003"], QString("name003"));
+    delete r;
+}
+
+void tst_QSparqlTrackerDirect::query_contacts_async()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    QSignalSpy spy(r, SIGNAL(finished()));
+    while (spy.count() == 0) {
+        QTest::qWait(100);
+    }
+
+    QCOMPARE(spy.count(), 1);
+
     QCOMPARE(r->hasError(), false);
     QCOMPARE(r->size(), 3);
     QHash<QString, QString> contactNames;
@@ -230,6 +267,76 @@ void tst_QSparqlTrackerDirect::insert_and_delete_contact()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
+    QCOMPARE(r->hasError(), false);
+    delete r;
+
+    // Verify that it got deleted
+    contactNames.clear();
+    r = conn.exec(q);
+    QVERIFY(r != 0);
+    r->waitForFinished();
+    QCOMPARE(r->size(), 3);
+    while (r->next()) {
+        contactNames[r->binding(0).value().toString()] =
+            r->binding(1).value().toString();
+    }
+    QCOMPARE(contactNames.size(), 3);
+    delete r;
+}
+
+void tst_QSparqlTrackerDirect::insert_and_delete_contact_async()
+{
+    // This test will leave unclean test data in tracker if it crashes.
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery add("insert { <addeduri001> a nco:PersonContact; "
+                     "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                     "nco:nameGiven \"addedname001\" .}",
+                     QSparqlQuery::InsertStatement);
+
+    QSparqlResult* r = conn.exec(add);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    QSignalSpy insertSpy(r, SIGNAL(finished()));
+    while (insertSpy.count() == 0) {
+        QTest::qWait(100);
+    }
+    QCOMPARE(insertSpy.count(), 1);
+
+    QCOMPARE(r->hasError(), false);
+    delete r;
+
+    // Verify that the insertion succeeded
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QHash<QString, QString> contactNames;
+    r = conn.exec(q);
+    QVERIFY(r != 0);
+    r->waitForFinished();
+    QCOMPARE(r->size(), 4);
+    while (r->next()) {
+        contactNames[r->binding(0).value().toString()] =
+            r->binding(1).value().toString();
+    }
+    QCOMPARE(contactNames.size(), 4);
+    QCOMPARE(contactNames["addeduri001"], QString("addedname001"));
+    delete r;
+
+    // Delete the uri
+    QSparqlQuery del("delete { <addeduri001> a rdfs:Resource. }",
+                     QSparqlQuery::DeleteStatement);
+
+    r = conn.exec(del);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    QSignalSpy deleteSpy(r, SIGNAL(finished()));
+    while (deleteSpy.count() == 0) {
+        QTest::qWait(100);
+    }
+    QCOMPARE(deleteSpy.count(), 1);
+
     QCOMPARE(r->hasError(), false);
     delete r;
 
@@ -406,6 +513,66 @@ void tst_QSparqlTrackerDirect::delete_partially_iterated_result()
     QTest::qWait(1000);
 }
 
+namespace {
+class DataReadyListener : public QObject
+{
+    Q_OBJECT
+public:
+    DataReadyListener(QSparqlResult* r) : result(r), received(0)
+    {
+        connect(r, SIGNAL(dataReady(int)),
+                SLOT(onDataReady(int)));
+    }
+public slots:
+    void onDataReady(int tc)
+    {
+        //qDebug() << "Ready" << tc;
+        if (result) {
+            result->deleteLater();
+            result = 0;
+        }
+        received = tc;
+    }
+public:
+    QSparqlResult* result;
+    int received;
+};
+
+}
+
+void tst_QSparqlTrackerDirect::delete_nearly_finished_result()
+{
+    // This is a regression test for a crash bug. Running this shouldn't print
+    // out warnings:
+
+    // tst_qsparql_tracker_direct[17909]: GLIB CRITICAL ** GLib-GObject -
+    // g_object_unref: assertion `G_IS_OBJECT (object)' failed
+
+    // (It doens't always crash.) Detecting the warnings is a bit of a manual
+    // work.
+
+    qDebug() << "delete_nearly_finished_result: no GLIB_CRITICALs should be printed:";
+
+    QSparqlConnectionOptions opts;
+    opts.setDataReadyInterval(1);
+
+    QSparqlConnection conn("QTRACKER_DIRECT", opts);
+    // A big query returning a lot of results
+    QSparqlQuery q("select ?u {?u a rdfs:Resource . }");
+
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    DataReadyListener listener(r); // this will delete the result
+
+    // And then spin the event loop. Unfortunately, we don't have anything which
+    // we could use for verifying we didn't unref the same object twice (it
+    // doesn't always crash).
+    QTest::qWait(3000);
+
+}
+
 void tst_QSparqlTrackerDirect::result_type_bool()
 {
     QSparqlConnection conn("QTRACKER_DIRECT");
@@ -450,7 +617,6 @@ void tst_QSparqlTrackerDirect::result_type_bool()
 
 void tst_QSparqlTrackerDirect::concurrent_queries()
 {
-    QSKIP("Hangs in r2->waitForFinished()", SkipAll);
     QSparqlConnection conn("QTRACKER_DIRECT");
 
     QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
@@ -464,9 +630,7 @@ void tst_QSparqlTrackerDirect::concurrent_queries()
     QVERIFY(r2 != 0);
     QCOMPARE(r2->hasError(), false);
 
-    qDebug() << "waiting 1";
     r1->waitForFinished();
-    qDebug() << "waiting 2";
     r2->waitForFinished();
 
     QCOMPARE(r1->hasError(), false);
@@ -657,6 +821,59 @@ void tst_QSparqlTrackerDirect::special_chars()
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
     QCOMPARE(r->hasError(), false);
+    delete r;
+}
+
+void tst_QSparqlTrackerDirect::result_immediately_finished()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    // No matter how slow this thread is, the result shouldn't get finished
+    // behind our back.
+    sleep(3);
+
+    QSignalSpy spy(r, SIGNAL(finished()));
+    QTime timer;
+    timer.start();
+    while (spy.count() == 0 && timer.elapsed() < 3000) {
+        QTest::qWait(100);
+    }
+
+    QCOMPARE(spy.count(), 1);
+    delete r;
+}
+
+void tst_QSparqlTrackerDirect::result_immediately_finished2()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QSignalSpy spy(r, SIGNAL(finished()));
+
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    // No matter how slow this thread is, the result shouldn't get finished
+    // behind our back.
+    sleep(3);
+
+    // But when we do waitForFinished, the "side effects" like emitting the
+    // finished() signal should occur before it returns.
+    r->waitForFinished();
+    QCOMPARE(spy.count(), 1);
+
+    // And they should not occur again even if we wait here a bit...
+    QTest::qWait(1000);
+    QCOMPARE(spy.count(), 1);
+
     delete r;
 }
 

@@ -80,7 +80,7 @@ public:
     void run()
     {
         setTerminationEnabled(false);
-        if (result->exec()) {
+        if (result->runQuery()) {
             if (result->isTable()) {
                 while (result->fetchNextResult()) {
                     setTerminationEnabled(true);
@@ -128,7 +128,7 @@ public:
     void setBoolValue(bool v);
     void dataReady(int totalCount);
 
-    TrackerSparqlCursor * cursor;
+    TrackerSparqlCursor* cursor;
     QVector<QString> columnNames;
     QList<QSparqlResultRow> results;
 
@@ -140,38 +140,41 @@ public:
     QSemaphore freeResults;
 
     bool isFinished;
-    bool resultAlive; // whether the corresponding Result object is still alive
 
     QTrackerDirectResult* q;
     QTrackerDirectDriverPrivate *driverPrivate;
     QTrackerDirectFetcherPrivate *fetcher;
-    // This mutex is for ensuring that only one thread at a time
-    // is accessing the results array
+    bool fetcherStarted;
+    // This mutex is for ensuring that only one thread at a time is accessing
+    // the member variables of this class (mainly: "results" and "cursor").
     QMutex mutex;
 };
 
 QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult* result,
                                                             QTrackerDirectDriverPrivate *dpp,
                                                             QTrackerDirectFetcherPrivate *f)
-: cursor(0), resultsBase(0), isFinished(false), resultAlive(true),
-  q(result), driverPrivate(dpp), fetcher(f), mutex(QMutex::Recursive)
+  : cursor(0), resultsBase(0), isFinished(false),
+  q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
+  mutex(QMutex::Recursive)
 {
 }
 
 QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
 {
+    // The fetcher thread also accesses "cursor", so, first terminate the
+    // thread, and only after that unref the cursor. Don't lock the mutex here,
+    // since the thread might lock the same mutex right after us, and we
+    // couldn't terminate it then.
     if (fetcher->isRunning()) {
         fetcher->terminate();
-        if (!fetcher->wait(500)) {
-            qWarning() << "QTrackerDirectResult: unable to terminate the result fetcher thread";
-            // Does deleting the fetcher here cause a crash?
-            delete fetcher;
-            return;
-        }
+        // This might (in theory) block forever. But the fetcher thread *should*
+        // enter a "termination enabled" point after fetching each row.
+        fetcher->wait();
     }
 
     delete fetcher;
 
+    QMutexLocker resultLocker(&mutex);
     if (cursor != 0) {
         g_object_unref(cursor);
         cursor = 0;
@@ -196,8 +199,10 @@ void QTrackerDirectResultPrivate::setFreeResults()
 
 void QTrackerDirectResultPrivate::terminate()
 {
-    if (resultsCount() % driverPrivate->dataReadyInterval != 0) {
-        dataReady(resultsCount());
+    QMutexLocker resultLocker(&mutex);
+
+    if (results.count() % driverPrivate->dataReadyInterval != 0) {
+        dataReady(results.count());
     }
 
     isFinished = true;
@@ -223,8 +228,12 @@ void QTrackerDirectResultPrivate::dataReady(int totalCount)
     emit q->dataReady(totalCount);
 }
 
-QTrackerDirectResult::QTrackerDirectResult(QTrackerDirectDriverPrivate* p)
+QTrackerDirectResult::QTrackerDirectResult(QTrackerDirectDriverPrivate* p,
+                                           const QString& query,
+                                           QSparqlQuery::StatementType type)
 {
+    setQuery(query);
+    setStatementType(type);
     d = new QTrackerDirectResultPrivate(this, p, new QTrackerDirectFetcherPrivate(this));
 }
 
@@ -235,35 +244,42 @@ QTrackerDirectResult::~QTrackerDirectResult()
 
 QTrackerDirectResult* QTrackerDirectDriver::exec(const QString& query, QSparqlQuery::StatementType type)
 {
-    QTrackerDirectResult* res = new QTrackerDirectResult(d);
-    res->exec(query, type);
-    return res;
-}
+    QTrackerDirectResult* res = new QTrackerDirectResult(d, query, type);
 
-void QTrackerDirectResult::exec(const QString& query, QSparqlQuery::StatementType type)
-{
-    setQuery(query);
-    setStatementType(type);
-
-    if (    type != QSparqlQuery::AskStatement
-            && type != QSparqlQuery::SelectStatement
-            && type != QSparqlQuery::InsertStatement
-            && type != QSparqlQuery::DeleteStatement )
+    if (type != QSparqlQuery::AskStatement
+        && type != QSparqlQuery::SelectStatement
+        && type != QSparqlQuery::InsertStatement
+        && type != QSparqlQuery::DeleteStatement)
     {
         setLastError(QSparqlError(
                               QLatin1String("Unsupported statement type"),
                               QSparqlError::BackendError));
         qWarning() << "QTrackerDirectResult:" << lastError() << query;
-        terminate();
-        return;
+        res->terminate();
     }
-
-    d->fetcher->start();
+    else {
+        // Queue calling exec() on the result. This way the finished() and
+        // dataReady() signals won't be emitted before the user connects to
+        // them, and the result won't be in the "finished" state before the
+        // thread that calls this function has entered its event loop.
+        QMetaObject::invokeMethod(res, "startFetcher",  Qt::QueuedConnection);
+    }
+    return res;
 }
 
-bool QTrackerDirectResult::exec()
+void QTrackerDirectResult::startFetcher()
+{
+    QMutexLocker resultLocker(&(d->mutex));
+    if (!d->fetcherStarted) {
+        d->fetcherStarted = true;
+        d->fetcher->start();
+    }
+}
+
+bool QTrackerDirectResult::runQuery()
 {
     QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
+    QMutexLocker resultLocker(&(d->mutex));
 
     GError * error = 0;
     if (isTable() || isBool()) {
@@ -272,10 +288,12 @@ bool QTrackerDirectResult::exec()
                                                         0,
                                                         &error );
         if (error != 0 || d->cursor == 0) {
-            QSparqlError e(QString::fromLatin1(error ? error->message : "unknown error"));
-            e.setType(QSparqlError::StatementError);
+            QSparqlError e(QString::fromLatin1(error ? error->message : "unknown error"),
+                           QSparqlError::StatementError,
+                           error ? error->code : -1);
             setLastError(e);
-            g_error_free(error);
+            if (error)
+                g_error_free(error);
             qWarning() << "QTrackerDirectResult:" << lastError() << query();
             terminate();
             return false;
@@ -287,9 +305,10 @@ bool QTrackerDirectResult::exec()
                                             0,
                                             &error );
         if (error != 0) {
-            QSparqlError e(QString::fromLatin1(error ? error->message : "unknown error"));
+            QSparqlError e(QString::fromLatin1(error->message),
+                           QSparqlError::StatementError,
+                           error->code);
             g_error_free(error);
-            e.setType(QSparqlError::StatementError);
             setLastError(e);
             qWarning() << "QTrackerDirectResult:" << lastError() << query();
             terminate();
@@ -308,14 +327,16 @@ void QTrackerDirectResult::cleanup()
 bool QTrackerDirectResult::fetchNextResult()
 {
     QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
+    QMutexLocker resultLocker(&(d->mutex));
 
     GError * error = 0;
     gboolean active = tracker_sparql_cursor_next(d->cursor, 0, &error);
 
     if (error != 0) {
-        QSparqlError e(QString::fromLatin1(error ? error->message : "unknown error"));
+        QSparqlError e(QString::fromLatin1(error->message),
+                       QSparqlError::BackendError,
+                       error->code);
         g_error_free(error);
-        e.setType(QSparqlError::BackendError);
         setLastError(e);
         qWarning() << "QTrackerDirectResult:" << lastError() << query();
         terminate();
@@ -399,20 +420,20 @@ bool QTrackerDirectResult::fetchNextResult()
 bool QTrackerDirectResult::fetchBoolResult()
 {
     QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
+    QMutexLocker resultLocker(&(d->mutex));
 
     GError * error = 0;
     tracker_sparql_cursor_next(d->cursor, 0, &error);
     if (error != 0) {
-        QSparqlError e(QString::fromLatin1(error ? error->message : "unknown error"));
+        QSparqlError e(QString::fromLatin1(error->message),
+                       QSparqlError::BackendError,
+                       error->code);
         g_error_free(error);
-        e.setType(QSparqlError::BackendError);
         setLastError(e);
         qWarning() << "QTrackerDirectResult:" << lastError() << query();
         terminate();
         return false;
     }
-
-    QMutexLocker resultLocker(&(d->mutex));
 
     if (tracker_sparql_cursor_get_n_columns(d->cursor) == 1)  {
         QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, 0, 0));
@@ -467,6 +488,9 @@ void QTrackerDirectResult::waitForFinished()
 {
     if (d->isFinished)
         return;
+
+    // We may have queued startFetcher, call it now.
+    startFetcher();
 
     d->fetcher->wait();
 }
