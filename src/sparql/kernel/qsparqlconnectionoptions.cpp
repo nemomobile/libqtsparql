@@ -77,6 +77,7 @@ static QString hostKey = QString::fromLatin1("host");
 static QString pathKey = QString::fromLatin1("path");
 static QString portKey = QString::fromLatin1("port");
 static QString dataReadyIntervalKey = QString::fromLatin1("dataReadyInterval");
+static QString dataReadyBufferSizeKey = QString::fromLatin1("dataReadyBufferSize");
 static QString userKey = QString::fromLatin1("user");
 static QString passwordKey = QString::fromLatin1("password");
 static QString databaseKey = QString::fromLatin1("database");
@@ -231,6 +232,23 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
         qWarning() << "QSparqlConnectionOptions: invalid dataReady interval:" << interval;
 }
 
+/*!
+    Convenience function for setting the size of the buffer for holding results.
+    Normally all results are held in a buffer in the QSparqlResult, but this
+    option allows results to be discarded once they have been read with
+    QSparqlResult::next(). If the buffer is full, then the QSparql driver will
+    wait until there is room in the buffer before resuming the query.
+
+    \sa setOption()
+*/
+void QSparqlConnectionOptions::setDataReadyBufferSize(int size)
+{
+    if (size > 0)
+        setOption(dataReadyBufferSizeKey, size);
+    else
+        qWarning() << "QSparqlConnectionOptions: invalid dataReady buffer size:" << size;
+}
+
 #ifndef QT_NO_NETWORKPROXY
 /*!
     Convenience function for setting the QNetworkProxy. Valid
@@ -330,6 +348,19 @@ int QSparqlConnectionOptions::dataReadyInterval() const
 {
     QVariant v = option(dataReadyIntervalKey);
     return v.canConvert(QVariant::Int) ? v.toInt() : 1;
+}
+
+/*!
+    Convenience function for getting the buffer size for storing
+    results in QSparqlResult in terms of the number of
+    QSparqlResultRows to be held.
+
+    \sa option()
+*/
+int QSparqlConnectionOptions::dataReadyBufferSize() const
+{
+    QVariant v = option(dataReadyBufferSizeKey);
+    return v.canConvert(QVariant::Int) ? v.toInt() : -1;
 }
 
 /*!
