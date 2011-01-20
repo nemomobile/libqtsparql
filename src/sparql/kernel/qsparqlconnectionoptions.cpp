@@ -243,7 +243,7 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
 */
 void QSparqlConnectionOptions::setDataReadyBufferSize(int size)
 {
-    if (size > 0)
+    if (size > 1)
         setOption(dataReadyBufferSizeKey, size);
     else
         qWarning() << "QSparqlConnectionOptions: invalid dataReady buffer size:" << size;
