@@ -452,8 +452,8 @@ bool QTrackerDirectResult::fetchBoolResult()
 
 QSparqlBinding QTrackerDirectResult::binding(int field) const
 {
-    d->setFreeResults();
     QMutexLocker resultLocker(&(d->mutex));
+    d->setFreeResults();
 
     if (!isValid()) {
         return QSparqlBinding();
@@ -469,8 +469,8 @@ QSparqlBinding QTrackerDirectResult::binding(int field) const
 
 QVariant QTrackerDirectResult::value(int field) const
 {
-    d->setFreeResults();
     QMutexLocker resultLocker(&(d->mutex));
+    d->setFreeResults();
 
     if (!isValid()) {
         return QVariant();
@@ -513,8 +513,8 @@ int QTrackerDirectResult::size() const
 
 QSparqlResultRow QTrackerDirectResult::current() const
 {
-    d->setFreeResults();
     QMutexLocker resultLocker(&(d->mutex));
+    d->setFreeResults();
 
     if (!isValid()) {
         return QSparqlResultRow();
