@@ -72,6 +72,57 @@ Q_GLOBAL_STATIC_WITH_ARGS(QUrl, Integer,
                           (QLatin1String("http://www.w3.org/2001/XMLSchema#integer")))
 }
 
+static QSparqlBinding qMakeBinding(TrackerSparqlValueType type, const QByteArray &value, const QString& columnName)
+{
+    QSparqlBinding binding;
+    binding.setName(columnName);
+
+    switch (type) {
+    case TRACKER_SPARQL_VALUE_TYPE_UNBOUND:
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_URI:
+        binding.setValue(QUrl::fromEncoded(value));
+        break;
+    case TRACKER_SPARQL_VALUE_TYPE_STRING:
+    {
+        binding.setValue(QString::fromUtf8(value));
+        break;
+    }
+    case TRACKER_SPARQL_VALUE_TYPE_INTEGER:
+    {
+        binding.setValue(QString::fromUtf8(value), *XSD::Integer());
+        break;
+    }
+    case TRACKER_SPARQL_VALUE_TYPE_DOUBLE:
+    {
+        binding.setValue(QString::fromUtf8(value), *XSD::Double());
+        break;
+    }
+    case TRACKER_SPARQL_VALUE_TYPE_DATETIME:
+    {
+        binding.setValue(QString::fromUtf8(value), *XSD::DateTime());
+        break;
+    }
+    case TRACKER_SPARQL_VALUE_TYPE_BLANK_NODE:
+    {
+        binding.setBlankNodeLabel(QString::fromUtf8(value));
+        break;
+    }
+    case TRACKER_SPARQL_VALUE_TYPE_BOOLEAN:
+    {
+        if (value == "1" || value.toLower() == "true")
+            binding.setValue(QString::fromLatin1("true"), *XSD::Boolean());
+        else
+            binding.setValue(QString::fromLatin1("false"), *XSD::Boolean());
+        break;
+    }
+    default:
+        break;
+    }
+
+    return binding;
+}
+
 class QTrackerDirectFetcherPrivate : public QThread
 {
 public:
@@ -130,7 +181,7 @@ public:
 
     TrackerSparqlCursor* cursor;
     QVector<QString> columnNames;
-    QList<QSparqlResultRow> results;
+    QList<QVector<QPair<TrackerSparqlValueType, QByteArray> > > results;
 
     // These two fields are only used by the dataReadyBufferSize option
     //  - resultsBase: count of the number of results deleted
@@ -360,7 +411,7 @@ bool QTrackerDirectResult::fetchNextResult()
         }
     }
 
-    QSparqlResultRow resultRow;
+    QVector<QPair<TrackerSparqlValueType, QByteArray> > resultRow;
     gint n_columns = tracker_sparql_cursor_get_n_columns(d->cursor);
 
     if (d->columnNames.empty()) {
@@ -370,60 +421,9 @@ bool QTrackerDirectResult::fetchNextResult()
     }
 
     for (int i = 0; i < n_columns; i++) {
-        QSparqlBinding binding;
-        binding.setName(d->columnNames[i]);
-        TrackerSparqlValueType type = tracker_sparql_cursor_get_value_type(d->cursor, i);
-
-        switch (type) {
-        case TRACKER_SPARQL_VALUE_TYPE_UNBOUND:
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_URI:
-            binding.setValue(QUrl::fromEncoded(tracker_sparql_cursor_get_string(d->cursor, i, 0)));
-            break;
-        case TRACKER_SPARQL_VALUE_TYPE_STRING:
-        {
-            QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
-            binding.setValue(value);
-            break;
-        }
-        case TRACKER_SPARQL_VALUE_TYPE_INTEGER:
-        {
-            QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
-            binding.setValue(value, *XSD::Integer());
-            break;
-        }
-        case TRACKER_SPARQL_VALUE_TYPE_DOUBLE:
-        {
-            QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
-            binding.setValue(value, *XSD::Double());
-            break;
-        }
-        case TRACKER_SPARQL_VALUE_TYPE_DATETIME:
-        {
-            QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
-            binding.setValue(value, *XSD::DateTime());
-            break;
-        }
-        case TRACKER_SPARQL_VALUE_TYPE_BLANK_NODE:
-        {
-            QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
-            binding.setBlankNodeLabel(value);
-            break;
-        }
-        case TRACKER_SPARQL_VALUE_TYPE_BOOLEAN:
-        {
-            QByteArray value(tracker_sparql_cursor_get_string(d->cursor, i, 0));
-            if (value == "1" || value.toLower() == "true")
-                binding.setValue(QString::fromLatin1("true"), *XSD::Boolean());
-            else
-                binding.setValue(QString::fromLatin1("false"), *XSD::Boolean());
-            break;
-        }
-        default:
-            break;
-        }
-
-        resultRow.append(binding);
+        QPair<TrackerSparqlValueType, QByteArray> value(tracker_sparql_cursor_get_value_type(d->cursor, i),
+                                                      tracker_sparql_cursor_get_string(d->cursor, i, 0) );
+        resultRow.append(value);
     }
 
     d->results.append(resultRow);
@@ -481,7 +481,9 @@ QSparqlBinding QTrackerDirectResult::binding(int field) const
         return QSparqlBinding();
     }
 
-    return d->results[d->resultsPos()].binding(field);
+    return qMakeBinding(    d->results[d->resultsPos()][field].first,
+                            d->results[d->resultsPos()][field].second,
+                            d->columnNames[field]);
 }
 
 QVariant QTrackerDirectResult::value(int field) const
@@ -498,7 +500,10 @@ QVariant QTrackerDirectResult::value(int field) const
         return QVariant();
     }
 
-    return d->results[d->resultsPos()].value(field);
+    QSparqlBinding binding = qMakeBinding(  d->results[d->resultsPos()][field].first,
+                                            d->results[d->resultsPos()][field].second,
+                                            d->columnNames[field]);
+    return binding.value();
 }
 
 void QTrackerDirectResult::waitForFinished()
@@ -540,7 +545,13 @@ QSparqlResultRow QTrackerDirectResult::current() const
     if (d->resultsPos() < 0 || pos() >= d->resultsCount())
         return QSparqlResultRow();
 
-    return d->results[d->resultsPos()];
+    QSparqlResultRow resultRow;
+    for (int i = 0; i < d->columnNames.count(); ++i) {
+        resultRow.append(qMakeBinding(d->results[d->resultsPos()][i].first,
+                                      d->results[d->resultsPos()][i].second,
+                                      d->columnNames[i]));
+    }
+    return resultRow;
 }
 
 QTrackerDirectDriverPrivate::QTrackerDirectDriverPrivate()
