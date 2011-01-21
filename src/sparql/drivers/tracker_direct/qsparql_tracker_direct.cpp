@@ -506,6 +506,23 @@ QVariant QTrackerDirectResult::value(int field) const
     return binding.value();
 }
 
+QString QTrackerDirectResult::string(int field) const
+{
+    QMutexLocker resultLocker(&(d->mutex));
+    d->setFreeResults();
+
+    if (!isValid()) {
+        return QString();
+    }
+
+    if (field >= d->results[d->resultsPos()].count() || field < 0) {
+        qWarning() << "QTrackerDirectResult::data[" << pos() << "]: column" << field << "out of range";
+        return QString();
+    }
+
+    return QString::fromUtf8(d->results[d->resultsPos()][field].second);
+}
+
 void QTrackerDirectResult::waitForFinished()
 {
     if (d->isFinished)
