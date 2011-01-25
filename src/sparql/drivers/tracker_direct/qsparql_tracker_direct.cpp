@@ -56,6 +56,8 @@
 
 #include <qdebug.h>
 
+#define DATA_READY_BUFFER_SIZE 21
+
 QT_BEGIN_NAMESPACE
 
 namespace XSD {
@@ -157,7 +159,7 @@ public:
 
     TrackerSparqlConnection *connection;
     int dataReadyInterval;
-    int dataReadyBufferSize;
+    bool isForwardOnly;
     // This mutex is for ensuring that only one thread at a time
     // is using the connection to make tracker queries. This mutex
     // probably isn't needed as a TrackerSparqlConnection is
@@ -183,7 +185,7 @@ public:
     QVector<QString> columnNames;
     QList<QVector<QPair<TrackerSparqlValueType, QByteArray> > > results;
 
-    // These two fields are only used by the dataReadyBufferSize option
+    // These two fields are only used by the isForwardOnly option
     //  - resultsBase: count of the number of results deleted
     //  - freeResults: number of free entries in the results buffer,
     //      and the fetcher thread will wait until it is at least 1
@@ -244,8 +246,8 @@ int QTrackerDirectResultPrivate::resultsPos()
 
 void QTrackerDirectResultPrivate::setFreeResults()
 {
-    if (driverPrivate->dataReadyBufferSize > 0)
-        freeResults.release(driverPrivate->dataReadyBufferSize - resultsPos() - 1);
+    if (driverPrivate->isForwardOnly)
+        freeResults.release(DATA_READY_BUFFER_SIZE - resultsPos() - 1);
 }
 
 void QTrackerDirectResultPrivate::terminate()
@@ -398,14 +400,14 @@ bool QTrackerDirectResult::fetchNextResult()
         return false;
     }
 
-    if (d->driverPrivate->dataReadyBufferSize > 0) {
+    if (d->driverPrivate->isForwardOnly) {
         d->freeResults.acquire(1);
     }
 
     QMutexLocker resultLocker(&(d->mutex));
 
-    if (d->driverPrivate->dataReadyBufferSize > 0) {
-        if ((d->results.count() + 1) > d->driverPrivate->dataReadyBufferSize) {
+    if (d->driverPrivate->isForwardOnly) {
+        if ((d->results.count() + 1) > DATA_READY_BUFFER_SIZE) {
             d->results.removeFirst();
             d->resultsBase++;
         }
@@ -506,7 +508,7 @@ QVariant QTrackerDirectResult::value(int field) const
     return binding.value();
 }
 
-QString QTrackerDirectResult::string(int field) const
+QString QTrackerDirectResult::stringValue(int field) const
 {
     QMutexLocker resultLocker(&(d->mutex));
     d->setFreeResults();
@@ -618,7 +620,7 @@ bool QTrackerDirectDriver::open(const QSparqlConnectionOptions& options)
     QMutexLocker connectionLocker(&(d->mutex));
 
     d->dataReadyInterval = options.dataReadyInterval();
-    d->dataReadyBufferSize = options.dataReadyBufferSize();
+    d->isForwardOnly = options.isForwardOnly();
 
     if (isOpen())
         close();

@@ -77,7 +77,7 @@ static QString hostKey = QString::fromLatin1("host");
 static QString pathKey = QString::fromLatin1("path");
 static QString portKey = QString::fromLatin1("port");
 static QString dataReadyIntervalKey = QString::fromLatin1("dataReadyInterval");
-static QString dataReadyBufferSizeKey = QString::fromLatin1("dataReadyBufferSize");
+static QString forwardOnlyKey = QString::fromLatin1("forwardOnly");
 static QString userKey = QString::fromLatin1("user");
 static QString passwordKey = QString::fromLatin1("password");
 static QString databaseKey = QString::fromLatin1("database");
@@ -233,7 +233,8 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
 }
 
 /*!
-    Convenience function for setting the size of the buffer for holding results.
+    Convenience function for setting the driver to forward only mode using
+    a fixed size buffer.
     Normally all results are held in a buffer in the QSparqlResult, but this
     option allows results to be discarded once they have been read with
     QSparqlResult::next(). If the buffer is full, then the QSparql driver will
@@ -241,12 +242,9 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
 
     \sa setOption()
 */
-void QSparqlConnectionOptions::setDataReadyBufferSize(int size)
+void QSparqlConnectionOptions::setForwardOnly(bool yn)
 {
-    if (size > 1)
-        setOption(dataReadyBufferSizeKey, size);
-    else
-        qWarning() << "QSparqlConnectionOptions: invalid dataReady buffer size:" << size;
+    setOption(forwardOnlyKey, yn);
 }
 
 #ifndef QT_NO_NETWORKPROXY
@@ -351,16 +349,15 @@ int QSparqlConnectionOptions::dataReadyInterval() const
 }
 
 /*!
-    Convenience function for getting the buffer size for storing
-    results in QSparqlResult in terms of the number of
-    QSparqlResultRows to be held.
+    Convenience function for getting the value of the forward
+    only option
 
     \sa option()
 */
-int QSparqlConnectionOptions::dataReadyBufferSize() const
+bool QSparqlConnectionOptions::isForwardOnly() const
 {
-    QVariant v = option(dataReadyBufferSizeKey);
-    return v.canConvert(QVariant::Int) ? v.toInt() : -1;
+    QVariant v = option(forwardOnlyKey);
+    return v.canConvert(QVariant::Bool) ? v.toBool() : false;
 }
 
 /*!

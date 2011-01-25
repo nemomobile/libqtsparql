@@ -87,6 +87,7 @@ public:
     virtual QSparqlResultRow current() const;
     virtual QSparqlBinding binding(int i) const;
     virtual QVariant value(int i) const;
+    QString stringValue(int i) const;
     virtual int size() const;
 
 protected:
