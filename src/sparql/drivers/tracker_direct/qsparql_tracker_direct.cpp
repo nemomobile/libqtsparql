@@ -74,74 +74,32 @@ Q_GLOBAL_STATIC_WITH_ARGS(QUrl, Integer,
                           (QLatin1String("http://www.w3.org/2001/XMLSchema#integer")))
 }
 
-namespace {
-
-void readBindingValue(TrackerSparqlCursor* cursor, int col, QSparqlBinding& binding)
+static QVariant qMakeVariant(TrackerSparqlValueType type, const QByteArray &value, const QString& columnName)
 {
-    // Note: this function doesn't read the column name, that is done by the
-    // upper layer.
-    TrackerSparqlValueType type =
-        tracker_sparql_cursor_get_value_type(cursor, col);
+    QVariant v;
 
     switch (type) {
     case TRACKER_SPARQL_VALUE_TYPE_UNBOUND:
         break;
     case TRACKER_SPARQL_VALUE_TYPE_URI:
-        binding.setValue(QUrl::fromEncoded(tracker_sparql_cursor_get_string(cursor, col, 0)));
-        break;
+        return QVariant(QUrl::fromEncoded(value));
     case TRACKER_SPARQL_VALUE_TYPE_STRING:
-    {
-        QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(cursor, col, 0));
-        binding.setValue(value);
-        break;
-    }
+        return QVariant(QString::fromUtf8(value));
     case TRACKER_SPARQL_VALUE_TYPE_INTEGER:
-    {
-        QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(cursor, col, 0));
-        binding.setValue(value, *XSD::Integer());
-        break;
-    }
+        return QVariant(value.toInt());
     case TRACKER_SPARQL_VALUE_TYPE_DOUBLE:
-    {
-        QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(cursor, col, 0));
-        binding.setValue(value, *XSD::Double());
-        break;
-    }
+        return QVariant(value.toDouble());
     case TRACKER_SPARQL_VALUE_TYPE_DATETIME:
-    {
-        QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(cursor, col, 0));
-        binding.setValue(value, *XSD::DateTime());
-        break;
-    }
+        return QVariant(QDateTime::fromString(QString::fromLatin1(value), Qt::ISODate));
     case TRACKER_SPARQL_VALUE_TYPE_BLANK_NODE:
-    {
-        QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(cursor, col, 0));
-        binding.setBlankNodeLabel(value);
         break;
-    }
     case TRACKER_SPARQL_VALUE_TYPE_BOOLEAN:
-    {
-        QByteArray value(tracker_sparql_cursor_get_string(cursor, col, 0));
-        if (value == "1" || value.toLower() == "true")
-            binding.setValue(QString::fromLatin1("true"), *XSD::Boolean());
-        else
-            binding.setValue(QString::fromLatin1("false"), *XSD::Boolean());
-        break;
-    }
+        return QVariant(value == "1" || value.toLower() == "true");
     default:
         break;
     }
-}
 
-QVariant readValue(TrackerSparqlCursor* cursor, int col)
-{
-    // The string -> value (int, etc.) conversion is done in QSparqlBinding,
-    // hence the indirection here.
-    QSparqlBinding binding;
-    readBindingValue(cursor, col, binding);
-    return binding.value();
-}
-
+    return QVariant();
 }
 
 static QSparqlBinding qMakeBinding(TrackerSparqlValueType type, const QByteArray &value, const QString& columnName)
@@ -578,10 +536,9 @@ QVariant QTrackerDirectResult::value(int field) const
         return QVariant();
     }
 
-    QSparqlBinding binding = qMakeBinding(  d->results[d->resultsPos()][field].first,
-                                            d->results[d->resultsPos()][field].second,
-                                            d->columnNames[field]);
-    return binding.value();
+    return qMakeVariant(    d->results[d->resultsPos()][field].first,
+                            d->results[d->resultsPos()][field].second,
+                            d->columnNames[field]);
 }
 
 QString QTrackerDirectResult::stringValue(int field) const
@@ -745,11 +702,9 @@ QSparqlBinding QTrackerDirectSyncResult::binding(int i) const
     if (i < 0 || i >= d->n_columns)
         return QSparqlBinding();
 
-    QSparqlBinding binding;
-    readBindingValue(d->cursor, i, binding);
-    binding.setName(QString::fromUtf8(
-                        tracker_sparql_cursor_get_variable_name(d->cursor, i)));
-    return binding;
+    return qMakeBinding(    tracker_sparql_cursor_get_value_type(d->cursor, i),
+                            tracker_sparql_cursor_get_string(d->cursor, i, 0),
+                            QString::fromUtf8(tracker_sparql_cursor_get_variable_name(d->cursor, i)));
 }
 
 QVariant QTrackerDirectSyncResult::value(int i) const
@@ -765,7 +720,9 @@ QVariant QTrackerDirectSyncResult::value(int i) const
     if (i < 0 || i >= d->n_columns)
         return QVariant();
 
-    return readValue(d->cursor, i);
+    return qMakeVariant(    tracker_sparql_cursor_get_value_type(d->cursor, i),
+                            tracker_sparql_cursor_get_string(d->cursor, i, 0),
+                            QString::fromUtf8(tracker_sparql_cursor_get_variable_name(d->cursor, i)));
 }
 
 QString QTrackerDirectSyncResult::stringValue(int i) const
