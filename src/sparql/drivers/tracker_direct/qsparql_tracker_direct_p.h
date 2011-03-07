@@ -90,6 +90,7 @@ public:
     virtual QSparqlResultRow current() const;
     virtual QSparqlBinding binding(int i) const;
     virtual QVariant value(int i) const;
+    virtual QString stringValue(int i) const;
     virtual int size() const;
 
 private Q_SLOTS:

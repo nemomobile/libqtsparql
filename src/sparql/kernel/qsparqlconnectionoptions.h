@@ -82,6 +82,7 @@ public:
     void setPath(const QString& path);
     void setPort(int p);
     void setDataReadyInterval(int p);
+    void setForwardOnly(bool yn);
 
 #ifndef QT_NO_NETWORKPROXY
     void setProxy(const QNetworkProxy& proxy);
@@ -96,6 +97,7 @@ public:
     QString path() const;
     int port() const;
     int dataReadyInterval() const;
+    bool isForwardOnly() const;
 
 #ifndef QT_NO_NETWORKPROXY
     QNetworkProxy proxy () const;
