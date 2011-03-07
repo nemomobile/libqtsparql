@@ -77,6 +77,7 @@ static QString hostKey = QString::fromLatin1("host");
 static QString pathKey = QString::fromLatin1("path");
 static QString portKey = QString::fromLatin1("port");
 static QString dataReadyIntervalKey = QString::fromLatin1("dataReadyInterval");
+static QString forwardOnlyKey = QString::fromLatin1("forwardOnly");
 static QString userKey = QString::fromLatin1("user");
 static QString passwordKey = QString::fromLatin1("password");
 static QString databaseKey = QString::fromLatin1("database");
@@ -231,6 +232,21 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
         qWarning() << "QSparqlConnectionOptions: invalid dataReady interval:" << interval;
 }
 
+/*!
+    Convenience function for setting the driver to forward only mode using
+    a fixed size buffer.
+    Normally all results are held in a buffer in the QSparqlResult, but this
+    option allows results to be discarded once they have been read with
+    QSparqlResult::next(). If the buffer is full, then the QSparql driver will
+    wait until there is room in the buffer before resuming the query.
+
+    \sa setOption()
+*/
+void QSparqlConnectionOptions::setForwardOnly(bool yn)
+{
+    setOption(forwardOnlyKey, yn);
+}
+
 #ifndef QT_NO_NETWORKPROXY
 /*!
     Convenience function for setting the QNetworkProxy. Valid
@@ -330,6 +346,18 @@ int QSparqlConnectionOptions::dataReadyInterval() const
 {
     QVariant v = option(dataReadyIntervalKey);
     return v.canConvert(QVariant::Int) ? v.toInt() : 1;
+}
+
+/*!
+    Convenience function for getting the value of the forward
+    only option
+
+    \sa option()
+*/
+bool QSparqlConnectionOptions::isForwardOnly() const
+{
+    QVariant v = option(forwardOnlyKey);
+    return v.canConvert(QVariant::Bool) ? v.toBool() : false;
 }
 
 /*!
