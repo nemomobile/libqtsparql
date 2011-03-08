@@ -326,35 +326,17 @@ bool QSparqlResult::isFinished() const
 */
 bool QSparqlResult::next()
 {
-    // qDebug() << "QSparqlResult::next():" << pos() << " size:" << size();
-
-    // Note: Forward only results should re-implement this function, otherwise
-    // they cannot work.
-    if (hasFeature(QSparqlResult::ForwardOnly)) {
-        qWarning() <<
-            "QSparqlResult: ForwardOnly QSparqlResult doesn't override next()";
-        return false;
-    }
-
     bool b = false;
-    int s = size();
-    if (s < 0)
-        return false;
-
     switch (pos()) {
     case QSparql::BeforeFirstRow:
-        // special case: empty results
-        if (s == 0) {
-            d->idx = QSparql::AfterLastRow;
-            return false;
-        }
         b = first();
         return b;
     case QSparql::AfterLastRow:
         return false;
     default:
-        if (s < 0 || pos() + 1 < s) {
-            return setPos(pos() + 1);
+        if (pos() + 1 < size()) {
+            d->idx = pos() + 1;
+            return true;
         } else {
             d->idx = QSparql::AfterLastRow;
             return false;
@@ -469,19 +451,14 @@ bool QSparqlResult::last()
 }
 
 /*!
-  Returns the size of the result (number of rows returned), or -1 if
-  the size cannot be determined or if the database does not support
-  reporting information about query sizes. If the query is not
-  finished (isFinished() returns false), -1 is returned.
+  Returns the current size of the result (number of rows returned).
 
   \sa isFinished() QSparqlResult::hasFeature()
 */
 
 int QSparqlResult::size() const
 {
-    // The default implementation is OK for ForwardOnly Results. Other Results
-    // need to override this function.
-    return -1;
+    return 0;
 }
 
 /*!
@@ -571,13 +548,6 @@ QString QSparqlResult::stringValue(int i) const
     return value(i).toString();
 }
 
-void QSparqlResult::updatePos(int index)
-{
-    // This function dummily udpates d->idx to record the current position. This
-    // is used by results which handle the position tracking themselves (e.g.,
-    // forward only results use this in their overridden version of next()).
-    d->idx = index;
-}
 
 /*!
     This function is provided for derived classes to set the last
