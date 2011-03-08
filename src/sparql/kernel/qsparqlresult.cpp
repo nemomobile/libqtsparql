@@ -329,8 +329,13 @@ bool QSparqlResult::next()
     bool b = false;
     switch (pos()) {
     case QSparql::BeforeFirstRow:
-        b = first();
-        return b;
+        // Special case: empty results
+        if (size() == 0) {
+            d->idx = QSparql::AfterLastRow;
+            return false;
+        }
+        d->idx = 0;
+        return true;
     case QSparql::AfterLastRow:
         return false;
     default:
@@ -408,18 +413,12 @@ bool QSparqlResult::previous()
 
 bool QSparqlResult::first()
 {
+    if (hasFeature(ForwardOnly))
+        return false;
+
     // Already at the first result
     if (pos() == 0)
         return true;
-
-    if (hasFeature(ForwardOnly)) {
-        if (pos() == QSparql::BeforeFirstRow) {
-            // if the user hasn't iterated yet, calling first() is the same as
-            // calling next() once.
-            return next();
-        }
-        return false;
-    }
 
     return setPos(0);
 }
@@ -444,10 +443,7 @@ bool QSparqlResult::last()
         return false;
     }
 
-    int s = size();
-    if (s < 0)
-        return false;
-    return setPos(s - 1);
+    return setPos(size() - 1);
 }
 
 /*!
@@ -525,8 +521,7 @@ bool QSparqlResult::setPos(int pos)
         return false;
     }
 
-    int s = size();
-    if (pos < 0 || (s >= 0 && pos >= s))
+    if (pos < 0 || pos >= size())
         return false;
 
     d->idx = pos;
