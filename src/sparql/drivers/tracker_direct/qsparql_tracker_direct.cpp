@@ -294,6 +294,7 @@ QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult
   q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
   mutex(QMutex::Recursive)
 {
+    setFreeResults();
 }
 
 QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
