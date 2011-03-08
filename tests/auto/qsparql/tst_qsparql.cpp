@@ -57,7 +57,7 @@ class MockResult : public QSparqlResult
     MockResult(const MockDriver* d);
     int size() const
     {
-        return size_;
+        return currentSize;
     }
 
     QSparqlResultRow current() const
@@ -75,27 +75,30 @@ class MockResult : public QSparqlResult
         return QVariant();
     }
 public:
-    static int size_;
+    int currentSize;
+    static int maxSize;
 };
 
 class MockSyncFwOnlyResult : public QSparqlResult
 {
     Q_OBJECT
     public:
-    MockSyncFwOnlyResult()
-        : pos(-1) // first row is row 0, we start BeforeFirstRow
+    MockSyncFwOnlyResult() : currentSize(0)
     {
     }
+
+    int size() const
+    {
+        return currentSize;
+    }
+
     // Only this is needed for iterating the result
     bool next()
     {
-        // Do some work to fetch the next row
-        if (++pos < size_) { // determine if the row was the last or not
-            updatePos(pos);
-            return true;
-        }
-        updatePos(QSparql::AfterLastRow);
-        return false;
+        if (currentSize < maxSize)
+            currentSize++;
+
+        return QSparqlResult::next();
     }
     bool hasFeature(QSparqlResult::Feature f) const
     {
@@ -118,8 +121,9 @@ class MockSyncFwOnlyResult : public QSparqlResult
     {
         return QVariant();
     }
-    int pos;
-    static int size_;
+
+    int currentSize;
+    static int maxSize;
 };
 
 class MockDriver : public QSparqlDriver
@@ -163,15 +167,15 @@ class MockDriver : public QSparqlDriver
     static bool openRetVal;
 };
 
-int MockResult::size_ = 0;
-int MockSyncFwOnlyResult::size_ = 0;
+int MockResult::maxSize = 0;
+int MockSyncFwOnlyResult::maxSize = 0;
 
 int MockDriver::openCount = 0;
 int MockDriver::closeCount = 0;
 bool MockDriver::openRetVal = true;
 
 MockResult::MockResult(const MockDriver*)
-    : QSparqlResult()
+    : QSparqlResult(), currentSize(0)
 {
 }
 
@@ -240,8 +244,8 @@ void tst_QSparql::init()
     MockDriver::openCount = 0;
     MockDriver::closeCount = 0;
     MockDriver::openRetVal = true;
-    MockResult::size_ = 0;
-    MockSyncFwOnlyResult::size_ = 0;
+    MockResult::maxSize = 0;
+    MockSyncFwOnlyResult::maxSize = 0;
 }
 
 void tst_QSparql::cleanup()
@@ -322,7 +326,7 @@ void tst_QSparql::iterate_nonempty_result()
     QSparqlConnection conn("MOCK");
     QSparqlResult* res = conn.exec(QSparqlQuery("foo"));
     QVERIFY(!res->hasError());
-    MockResult::size_ = 2;
+    MockResult::maxSize = 2;
     QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     QVERIFY(res->next());
     QCOMPARE(res->pos(), 0);
@@ -344,7 +348,7 @@ void tst_QSparql::iterate_nonempty_result_backwards()
     QSparqlConnection conn("MOCK");
     QSparqlResult* res = conn.exec(QSparqlQuery("foo"));
     QVERIFY(!res->hasError());
-    MockResult::size_ = 2;
+    MockResult::maxSize = 2;
     // Get the result to the last position
     QVERIFY(res->last());
     QVERIFY(!res->next());
@@ -367,7 +371,7 @@ void tst_QSparql::iterate_empty_fwonly_result()
     QSparqlResult* res = conn.syncExec(QSparqlQuery("foo"));
     QVERIFY(!res->hasError());
 
-    MockSyncFwOnlyResult::size_ = 0;
+    MockSyncFwOnlyResult::maxSize = 0;
     QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     QVERIFY(!res->next());
     QVERIFY(res->pos() == QSparql::AfterLastRow);
@@ -382,7 +386,7 @@ void tst_QSparql::iterate_nonempty_fwonly_result()
     QSparqlConnection conn("MOCK");
     QSparqlResult* res = conn.syncExec(QSparqlQuery("foo"));
     QVERIFY(!res->hasError());
-    MockSyncFwOnlyResult::size_ = 2;
+    MockSyncFwOnlyResult::maxSize = 2;
     QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     QVERIFY(res->next());
     QCOMPARE(res->pos(), 0);
@@ -429,7 +433,7 @@ void tst_QSparql::iterate_nonempty_fwonly_result_first()
     QSparqlConnection conn("MOCK");
     QSparqlResult* res = conn.syncExec(QSparqlQuery("foo"));
     QVERIFY(!res->hasError());
-    MockSyncFwOnlyResult::size_ = 2;
+    MockSyncFwOnlyResult::maxSize = 2;
     QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     // legal first(): just call next() once
     QVERIFY(res->first());
