@@ -82,7 +82,7 @@ public:
     void setPath(const QString& path);
     void setPort(int p);
     void setDataReadyInterval(int p);
-    void setForwardOnly(bool yn);
+    void setForwardOnly();
 
 #ifndef QT_NO_NETWORKPROXY
     void setProxy(const QNetworkProxy& proxy);

@@ -242,9 +242,9 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
 
     \sa setOption()
 */
-void QSparqlConnectionOptions::setForwardOnly(bool yn)
+void QSparqlConnectionOptions::setForwardOnly()
 {
-    setOption(forwardOnlyKey, yn);
+    setOption(forwardOnlyKey, true);
 }
 
 #ifndef QT_NO_NETWORKPROXY
