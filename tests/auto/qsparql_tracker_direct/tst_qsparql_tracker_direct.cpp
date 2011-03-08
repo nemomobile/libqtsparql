@@ -63,6 +63,7 @@ public slots:
 private slots:
     void query_contacts();
     void qsparqlresultrow();
+    void query_contacts_forward_only();
     void query_contacts_async();
     void ask_contacts();
     void insert_and_delete_contact();
@@ -94,11 +95,7 @@ private slots:
     
     void delete_connection_immediately();
     void delete_connection_before_a_wait();
-
-    void go_beyond_columns_number();
-
-    void create_2_connections();
-
+    
     void unsupported_statement_type();
 
     void async_conn_opening();
@@ -197,15 +194,6 @@ void tst_QSparqlTrackerDirect::query_contacts()
 void tst_QSparqlTrackerDirect::qsparqlresultrow()
 {
     QSparqlConnection conn("QTRACKER_DIRECT");
-    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
-                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
-                   "nco:nameGiven ?ng .}");
-    QSparqlResult* r = conn.exec(q);
-    QVERIFY(r != 0);
-    QCOMPARE(r->hasError(), false);
-    r->waitForFinished(); // this test is synchronous only
-    QCOMPARE(r->hasError(), false);
-    QCOMPARE(r->size(), 3);
     QVERIFY(r->next());
     QSparqlResultRow row = r->current();
 
@@ -232,7 +220,31 @@ void tst_QSparqlTrackerDirect::qsparqlresultrow()
     QCOMPARE(row.contains("ng"), false);
     QCOMPARE(row.variableName(1), QString());
     QCOMPARE(row.indexOf("ng"), -1);
+}
 
+void tst_QSparqlTrackerDirect::query_contacts_forward_only()
+{
+    QSparqlConnectionOptions opts;
+    opts.setForwardOnly();
+    QSparqlConnection conn("QTRACKER_DIRECT", opts);
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+    r->waitForFinished(); // this test is synchronous only
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
+    QHash<QString, QString> contactNames;
+    while (r->next()) {
+        QCOMPARE(r->current().count(), 2);
+        contactNames[r->value(0).toString()] = r->value(1).toString();
+    }
+    QCOMPARE(contactNames.size(), 3);
+    QCOMPARE(contactNames["uri001"], QString("name001"));
+    QCOMPARE(contactNames["uri002"], QString("name002"));
+    QCOMPARE(contactNames["uri003"], QString("name003"));
     delete r;
 }
 
@@ -973,7 +985,7 @@ void tst_QSparqlTrackerDirect::result_immediately_finished2()
 
 void tst_QSparqlTrackerDirect::delete_connection_immediately()
 {
-    // QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlConnection conn("QTRACKER_DIRECT");
 }
 
 void tst_QSparqlTrackerDirect::delete_connection_before_a_wait()
