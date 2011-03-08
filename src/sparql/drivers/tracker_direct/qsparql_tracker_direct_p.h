@@ -86,6 +86,7 @@ public:
     // Implementation of the QSparqlResult interface
     virtual void waitForFinished();
     virtual bool isFinished() const;
+    virtual bool hasFeature(QSparqlResult::Feature feature) const;
 
     virtual QSparqlResultRow current() const;
     virtual QSparqlBinding binding(int i) const;
@@ -160,6 +161,7 @@ public:
     virtual QSparqlBinding binding(int i) const;
     virtual QVariant value(int i) const;
     virtual QString stringValue(int i) const;
+    virtual int size() const;
 
     virtual bool isFinished() const;
 
