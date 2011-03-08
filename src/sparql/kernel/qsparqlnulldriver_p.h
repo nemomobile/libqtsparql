@@ -78,8 +78,7 @@ public:
     inline void waitForFinished() { }
     inline bool isFinished() const { return true; }
 protected:
-    inline bool fetch(int) { return false; }
-    inline bool isNull(int) const { return false; }
+    inline bool next() { return false; }
     inline int size() const { return -1; }
 
     inline void setAt(int) {}
