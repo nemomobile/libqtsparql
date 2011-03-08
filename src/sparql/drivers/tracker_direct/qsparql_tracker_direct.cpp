@@ -646,6 +646,16 @@ QSparqlResultRow QTrackerDirectResult::current() const
     return resultRow;
 }
 
+bool QTrackerDirectResult::hasFeature(QSparqlResult::Feature feature) const
+{
+    switch (feature) {
+    case QSparqlResult::ForwardOnly:
+        return d->driverPrivate->isForwardOnly;
+    default:
+        return false;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
 QTrackerDirectUpdateResultPrivate::QTrackerDirectUpdateResultPrivate(   QTrackerDirectUpdateResult* result,
@@ -780,11 +790,12 @@ struct QTrackerDirectSyncResultPrivate
     ~QTrackerDirectSyncResultPrivate();
     TrackerSparqlCursor* cursor;
     int n_columns;
+    int size;
     QTrackerDirectDriverPrivate *driverPrivate;
 };
 
 QTrackerDirectSyncResultPrivate::QTrackerDirectSyncResultPrivate(QTrackerDirectDriverPrivate *dpp)
-    : cursor(0), n_columns(-1), driverPrivate(dpp)
+    : cursor(0), n_columns(-1), size(0), driverPrivate(dpp)
 {
 }
 
@@ -866,19 +877,15 @@ bool QTrackerDirectSyncResult::next()
         d->cursor = 0;
         return false;
     }
-
-    if (!active) {
+    
+    if (active) {
+        d->size++;
+    } else {
         g_object_unref(d->cursor);
         d->cursor = 0;
-        updatePos(QSparql::AfterLastRow);
-        return false;
     }
-    int oldPos = pos();
-    if (oldPos == QSparql::BeforeFirstRow)
-        updatePos(0);
-    else
-        updatePos(oldPos + 1);
-    return true;
+    
+    return QSparqlResult::next();
 }
 
 QSparqlResultRow QTrackerDirectSyncResult::current() const
@@ -956,6 +963,11 @@ QString QTrackerDirectSyncResult::stringValue(int i) const
         return QString();
 
     return QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, i, 0));
+}
+
+int QTrackerDirectSyncResult::size() const
+{
+    return d->size;
 }
 
 bool QTrackerDirectSyncResult::isFinished() const
