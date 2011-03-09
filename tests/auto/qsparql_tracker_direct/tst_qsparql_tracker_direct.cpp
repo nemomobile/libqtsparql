@@ -65,6 +65,8 @@ private slots:
     void qsparqlresultrow();
     void query_contacts_forward_only();
     void query_contacts_async();
+    void query_contacts_async_forward_only();
+    void query_async_forward_only();
     void ask_contacts();
     void insert_and_delete_contact();
     void insert_and_delete_contact_async();
@@ -277,6 +279,84 @@ void tst_QSparqlTrackerDirect::query_contacts_async()
     QCOMPARE(contactNames["uri002"], QString("name002"));
     QCOMPARE(contactNames["uri003"], QString("name003"));
     delete r;
+}
+
+void tst_QSparqlTrackerDirect::query_contacts_async_forward_only()
+{
+    QSparqlConnectionOptions opts;
+    opts.setForwardOnly();
+    QSparqlConnection conn("QTRACKER_DIRECT", opts);
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    QSignalSpy spy(r, SIGNAL(finished()));
+    while (spy.count() == 0) {
+        QTest::qWait(100);
+    }
+
+    QCOMPARE(spy.count(), 1);
+
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
+    QHash<QString, QString> contactNames;
+    while (r->next()) {
+        QCOMPARE(r->current().count(), 2);
+        contactNames[r->value(0).toString()] = r->value(1).toString();
+    }
+    QCOMPARE(contactNames.size(), 3);
+    QCOMPARE(contactNames["uri001"], QString("name001"));
+    QCOMPARE(contactNames["uri002"], QString("name002"));
+    QCOMPARE(contactNames["uri003"], QString("name003"));
+    delete r;
+}
+
+namespace {
+class ForwardOnlyDataReadyListener : public QObject
+{
+    Q_OBJECT
+public:
+    ForwardOnlyDataReadyListener(QSparqlResult* r) : result(r), received(0)
+    {
+        connect(r, SIGNAL(dataReady(int)),
+                SLOT(onDataReady(int)));
+    }
+public slots:
+    void onDataReady(int tc)
+    {
+        qDebug() << "Ready" << tc;
+        received = tc;
+        while (result->pos() < tc) {
+            QSparqlBinding b = result->binding(0);
+            result->next();
+        }
+    }
+public:
+    QSparqlResult* result;
+    int received;
+};
+
+}
+
+void tst_QSparqlTrackerDirect::query_async_forward_only()
+{
+    QSparqlConnectionOptions opts;
+    opts.setForwardOnly();
+    opts.setDataReadyInterval(1);
+
+    QSparqlConnection conn("QTRACKER_DIRECT", opts);
+    // A big query returning a lot of results
+    QSparqlQuery q("select ?u {?u a rdfs:Resource . }");
+
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    ForwardOnlyDataReadyListener listener(r);
+    QTest::qWait(30000);
 }
 
 void tst_QSparqlTrackerDirect::ask_contacts()
