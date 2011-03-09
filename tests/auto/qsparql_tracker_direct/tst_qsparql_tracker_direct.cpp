@@ -281,11 +281,10 @@ public:
 public slots:
     void onDataReady(int tc)
     {
-        qDebug() << "Ready" << tc;
+        // qDebug() << "ForwardOnlyDataReadyListener::onDataReady() tc:" << tc << "result->pos():" << result->pos();
         received = tc;
-        while (result->pos() < tc) {
+        while ((result->pos() + 1) < tc && result->next()) {
             QSparqlBinding b = result->binding(0);
-            result->next();
         }
     }
 public:
@@ -310,7 +309,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
     QCOMPARE(r->hasError(), false);
 
     ForwardOnlyDataReadyListener listener(r);
-    QTest::qWait(30000);
+    QTest::qWait(3000);
 }
 
 void tst_QSparqlTrackerDirect::ask_contacts()
