@@ -152,7 +152,7 @@ void tst_QSparqlTrackerDirectSync::query_contacts_sync()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     QVERIFY(!r->isFinished());
-    QCOMPARE(r->size(), -1); // no size info for iterator-type results
+    QCOMPARE(r->size(), 0);
     QHash<QString, QString> contactNames;
     while (r->next()) {
         QCOMPARE(r->current().count(), 2);
@@ -167,6 +167,7 @@ void tst_QSparqlTrackerDirectSync::query_contacts_sync()
     QCOMPARE(contactNames["uri002"], QString("name002"));
     QCOMPARE(contactNames["uri003"], QString("name003"));
 
+    QCOMPARE(r->size(), 3);
     QCOMPARE(r->hasError(), false);
     delete r;
 }
@@ -227,7 +228,7 @@ void tst_QSparqlTrackerDirectSync::insert_and_delete_contact_sync()
     QCOMPARE(r->hasError(), false);
 
     // No size information
-    QCOMPARE(r->size(), -1);
+    QCOMPARE(r->size(), 0);
     while (r->next()) {
         contactNames[r->value(0).toString()] =
             r->value(1).toString();
@@ -252,7 +253,7 @@ void tst_QSparqlTrackerDirectSync::insert_and_delete_contact_sync()
     r = conn.syncExec(q);
     QVERIFY(r != 0);
     // No size information
-    QCOMPARE(r->size(), -1);
+    QCOMPARE(r->size(), 0);
     QCOMPARE(r->hasError(), false);
     QVERIFY(!r->isFinished());
     while (r->next()) {
@@ -289,7 +290,7 @@ void tst_QSparqlTrackerDirectSync::iterate_result_sync()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     QVERIFY(!r->isFinished());
-    QCOMPARE(r->size(), -1);
+    QCOMPARE(r->size(), 0);
 
     QVERIFY(r->pos() == QSparql::BeforeFirstRow);
     // This is not a valid position
@@ -452,7 +453,7 @@ void tst_QSparqlTrackerDirectSync::special_chars()
     r = conn.syncExec(q);
     QVERIFY(r != 0);
     QVERIFY(!r->isFinished());
-    QCOMPARE(r->size(), -1);
+    QCOMPARE(r->size(), 0);
     while (r->next()) {
         contactNames[r->value(0).toString()] =
             r->value(1).toString();
