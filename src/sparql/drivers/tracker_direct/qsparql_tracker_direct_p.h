@@ -87,6 +87,7 @@ public:
     virtual void waitForFinished();
     virtual bool isFinished() const;
     virtual bool hasFeature(QSparqlResult::Feature feature) const;
+    virtual bool next();
 
     virtual QSparqlResultRow current() const;
     virtual QSparqlBinding binding(int i) const;
