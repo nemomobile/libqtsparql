@@ -234,7 +234,6 @@ public:
     ~QTrackerDirectResultPrivate();
     int resultsCount();
     int resultsPos();
-    void setFreeResults();
     void terminate();
     void setLastError(const QSparqlError& e);
     void setBoolValue(bool v);
@@ -316,7 +315,7 @@ QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult
   q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
   mutex(QMutex::Recursive)
 {
-    setFreeResults();
+    freeResults.release(DATA_READY_BUFFER_SIZE - 1);
 }
 
 QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
@@ -336,21 +335,16 @@ int QTrackerDirectResultPrivate::resultsCount()
 
 int QTrackerDirectResultPrivate::resultsPos()
 {
+    Q_ASSERT_X(q->pos() >= 0, "QSparqResult::pos()", "index out of range");
     return q->pos() - resultsBase;
-}
-
-void QTrackerDirectResultPrivate::setFreeResults()
-{
-    if (driverPrivate->isForwardOnly)
-        freeResults.release(DATA_READY_BUFFER_SIZE - resultsPos() - 1);
 }
 
 void QTrackerDirectResultPrivate::terminate()
 {
     QMutexLocker resultLocker(&mutex);
 
-    if (results.count() % driverPrivate->dataReadyInterval != 0) {
-        dataReady(results.count());
+    if (resultsCount() % driverPrivate->dataReadyInterval != 0) {
+        dataReady(resultsCount());
     }
 
     isFinished = 1;
@@ -425,7 +419,6 @@ void QTrackerDirectResult::startFetcher()
 bool QTrackerDirectResult::runQuery()
 {
     QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
-    QMutexLocker resultLocker(&(d->mutex));
 
     GError * error = 0;
     d->cursor = tracker_sparql_connection_query(    d->driverPrivate->connection,
@@ -433,6 +426,7 @@ bool QTrackerDirectResult::runQuery()
                                                     0,
                                                     &error );
     if (error != 0 || d->cursor == 0) {
+        QMutexLocker resultLocker(&(d->mutex));
         QSparqlError e(QString::fromUtf8(error ? error->message : "unknown error"),
                         QSparqlError::StatementError,
                         error ? error->code : -1);
@@ -460,6 +454,7 @@ bool QTrackerDirectResult::fetchNextResult()
     gboolean active = tracker_sparql_cursor_next(d->cursor, 0, &error);
 
     if (error != 0) {
+        QMutexLocker resultLocker(&(d->mutex));
         QSparqlError e(QString::fromUtf8(error->message),
                        errorCodeToType(error->code),
                        error->code);
@@ -481,9 +476,9 @@ bool QTrackerDirectResult::fetchNextResult()
     }
 
     QMutexLocker resultLocker(&(d->mutex));
-
+    
     if (d->driverPrivate->isForwardOnly) {
-        if ((d->results.count() + 1) > DATA_READY_BUFFER_SIZE) {
+        if (d->results.count() == DATA_READY_BUFFER_SIZE) {
             d->results.removeFirst();
             d->resultsBase++;
         }
@@ -505,8 +500,9 @@ bool QTrackerDirectResult::fetchNextResult()
     }
 
     d->results.append(resultRow);
-    if (d->results.count() % d->driverPrivate->dataReadyInterval == 0) {
-        d->dataReady(d->results.count());
+
+    if (d->resultsCount() % d->driverPrivate->dataReadyInterval == 0) {
+        d->dataReady(d->resultsCount());
     }
 
     return true;
@@ -518,7 +514,9 @@ bool QTrackerDirectResult::fetchBoolResult()
 
     GError * error = 0;
     tracker_sparql_cursor_next(d->cursor, 0, &error);
+    
     if (error != 0) {
+        QMutexLocker resultLocker(&(d->mutex));
         QSparqlError e(QString::fromUtf8(error->message),
                        errorCodeToType(error->code),
                        error->code);
@@ -549,12 +547,11 @@ bool QTrackerDirectResult::fetchBoolResult()
 QSparqlBinding QTrackerDirectResult::binding(int field) const
 {
     QMutexLocker resultLocker(&(d->mutex));
-    d->setFreeResults();
 
     if (!isValid()) {
         return QSparqlBinding();
     }
-
+    
     if (field >= d->results[d->resultsPos()].count() || field < 0) {
         qWarning() << "QTrackerDirectResult::data[" << pos() << "]: column" << field << "out of range";
         return QSparqlBinding();
@@ -568,7 +565,6 @@ QSparqlBinding QTrackerDirectResult::binding(int field) const
 QVariant QTrackerDirectResult::value(int field) const
 {
     QMutexLocker resultLocker(&(d->mutex));
-    d->setFreeResults();
 
     if (!isValid()) {
         return QVariant();
@@ -587,7 +583,6 @@ QVariant QTrackerDirectResult::value(int field) const
 QString QTrackerDirectResult::stringValue(int field) const
 {
     QMutexLocker resultLocker(&(d->mutex));
-    d->setFreeResults();
 
     if (!isValid()) {
         return QString();
@@ -630,13 +625,21 @@ void QTrackerDirectResult::terminate()
 int QTrackerDirectResult::size() const
 {
     QMutexLocker resultLocker(&(d->mutex));
-    return d->results.count();
+    return d->resultsCount();
+}
+
+bool QTrackerDirectResult::next()
+{
+    if (d->driverPrivate->isForwardOnly) {
+        d->freeResults.release(1);
+    }
+    
+    return QSparqlResult::next();
 }
 
 QSparqlResultRow QTrackerDirectResult::current() const
 {
     QMutexLocker resultLocker(&(d->mutex));
-    d->setFreeResults();
 
     if (!isValid()) {
         return QSparqlResultRow();
