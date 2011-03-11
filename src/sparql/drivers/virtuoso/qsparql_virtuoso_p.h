@@ -96,10 +96,11 @@ public:
     virtual bool runQuery();
 
     bool next();
+    int size() const;
+    
+    QSparqlResultRow current() const;
     QSparqlBinding binding(int field) const;
     QVariant value(int field) const;
-    QSparqlResultRow current() const;
-    int size() const;
 
     void waitForFinished();
     bool isFinished() const;
@@ -124,10 +125,11 @@ public:
     bool runQuery();
 
     bool next();
+    int size() const;
+
+    QSparqlResultRow current() const;
     QSparqlBinding binding(int field) const;
     QVariant value(int field) const;
-    QSparqlResultRow current() const;
-    int size() const;
 
     void waitForFinished();
     bool isFinished() const;
