@@ -326,12 +326,12 @@ bool QSparqlResult::isFinished() const
 */
 bool QSparqlResult::next()
 {
-    bool b = false;
     switch (pos()) {
     case QSparql::BeforeFirstRow:
         // Special case: empty results
         if (size() == 0) {
-            d->idx = QSparql::AfterLastRow;
+            if (isFinished())
+                d->idx = QSparql::AfterLastRow;
             return false;
         }
         d->idx = 0;
@@ -343,7 +343,8 @@ bool QSparqlResult::next()
             d->idx = pos() + 1;
             return true;
         } else {
-            d->idx = QSparql::AfterLastRow;
+            if (isFinished())
+                d->idx = QSparql::AfterLastRow;
             return false;
         }
     }
@@ -379,6 +380,7 @@ bool QSparqlResult::next()
 bool QSparqlResult::previous()
 {
     if (hasFeature(ForwardOnly))  {
+        qWarning("QSparqlResult::previous: cannot position backwards in a forward only query");
         return false;
     }
 
@@ -413,8 +415,10 @@ bool QSparqlResult::previous()
 
 bool QSparqlResult::first()
 {
-    if (hasFeature(ForwardOnly))
+    if (hasFeature(ForwardOnly)) {
+        qWarning("QSparqlResult::first: cannot position at the first in a forward only query");
         return false;
+    }
 
     // Already at the first result
     if (pos() == 0)
@@ -440,6 +444,7 @@ bool QSparqlResult::last()
     // With forward-only results, we don't know which row was the last before we
     // have iterated to it. So, we cannot jump into the last row.
     if (hasFeature(ForwardOnly)) {
+        qWarning("QSparqlResult::last: cannot position at the last in a forward only query");
         return false;
     }
 
@@ -518,6 +523,7 @@ bool QSparqlResult::setPos(int pos)
         // (and not 3). Should setPos() return true or false? We cannot satisfy
         // these 2 rules: 1) if setPos returns false, it hasn't changed the
         // state of the Result 2) if setPos(i) returns true, pos() returns i.
+        qWarning("QSparqlResult::setPos: cannot set a position in a forward only query");
         return false;
     }
 
