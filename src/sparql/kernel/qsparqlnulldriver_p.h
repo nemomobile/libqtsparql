@@ -78,7 +78,11 @@ public:
     inline void waitForFinished() { }
     inline bool isFinished() const { return true; }
 protected:
-    inline bool next() { return false; }
+    inline bool next() 
+    { 
+        qWarning("QSparqlNullResult::next: attempt to call next() on an invalid result");
+        return false; 
+    }
     inline int size() const { return -1; }
 
     inline void setAt(int) {}
