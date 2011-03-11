@@ -143,7 +143,7 @@ class QVirtuosoResultPrivate
 public:
     QVirtuosoResultPrivate(const QVirtuosoDriver* d, QVirtuosoDriverPrivate *dpp) :
         driver(d), hstmt(0), numResultCols(0), hdesc(0),
-        resultColIdx(0), driverPrivate(dpp)
+        resultColIdx(0), driverPrivate(dpp), size(0)
     {
     }
 
@@ -165,6 +165,7 @@ public:
     int disconnectCount;
     QVirtuosoDriverPrivate *driverPrivate;
     QAtomicInt isFinished;
+    int size;
 
     bool isStmtHandleValid() { return disconnectCount == driver->d->disconnectCount; }
     void updateStmtHandleState() { disconnectCount = driver->d->disconnectCount; }
@@ -699,14 +700,20 @@ bool QVirtuosoResult::next()
     SQLRETURN r;
     r = SQLFetch(d->hstmt);
 
-    if (r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO) {
+    if (r == SQL_SUCCESS || r == SQL_SUCCESS_WITH_INFO) {
+        d->size++;
+    } else {
         if (r != SQL_NO_DATA)
             setLastError(qMakeError(QCoreApplication::translate("QVirtuosoResult",
                 "Unable to fetch next"), QSparqlError::BackendError, d));
-        return false;
     }
 
-    return true;
+    return QSparqlResult::next();
+}
+
+int QVirtuosoResult::size() const
+{
+    return d->size;
 }
 
 QSparqlResultRow QVirtuosoResult::current() const
