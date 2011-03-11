@@ -86,6 +86,7 @@ class QVirtuosoDriver;
 class QVirtuosoResult : public QSparqlResult
 {
     Q_OBJECT
+    friend class QVirtuosoDriver;
 public:
     QVirtuosoResult(const QVirtuosoDriver * db, QVirtuosoDriverPrivate* p,
                     const QString& query, QSparqlQuery::StatementType type,
@@ -96,17 +97,23 @@ public:
     virtual bool runQuery();
 
     bool next();
+    int size() const;
+    
+    QSparqlResultRow current() const;
     QSparqlBinding binding(int field) const;
     QVariant value(int field) const;
-    QSparqlResultRow current() const;
-    int size() const;
 
-    void waitForFinished();
     bool isFinished() const;
 
     bool hasFeature(QSparqlResult::Feature feature) const;
-    virtual void terminate() {}
-private:
+    virtual void terminate();
+
+    int resultsCount() const;
+    int resultsPos() const;
+protected:
+    bool fetchBoolResult(SQLRETURN r);
+    bool fetchGraphResult(SQLRETURN r);
+// private:
     QVirtuosoResultPrivate *d;
 };
 
@@ -124,21 +131,23 @@ public:
     bool runQuery();
 
     bool next();
+    int size() const;
+
+    QSparqlResultRow current() const;
     QSparqlBinding binding(int field) const;
     QVariant value(int field) const;
-    QSparqlResultRow current() const;
-    int size() const;
 
     void waitForFinished();
     bool isFinished() const;
 
     bool hasFeature(QSparqlResult::Feature feature) const;
     void terminate();
-private:
+protected:
     bool fetchNextResult();
     bool fetchBoolResult();
     bool fetchGraphResult();
-    QVirtuosoAsyncResultPrivate *d;
+private:
+    QVirtuosoAsyncResultPrivate *da;
 };
 
 class Q_EXPORT_SPARQLDRIVER_VIRTUOSO QVirtuosoDriver : public QSparqlDriver

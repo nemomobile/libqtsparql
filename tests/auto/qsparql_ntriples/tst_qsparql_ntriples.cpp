@@ -99,7 +99,7 @@ void tst_QSparqlNTriples::parse_file()
 
     QByteArray buffer = file.readAll();
     QSparqlNTriples parser(buffer);
-    QVector<QSparqlResultRow> results = parser.parse();
+    QList<QSparqlResultRow> results = parser.parse<QList<QSparqlResultRow> >();
 
     QCOMPARE(results[0].binding("s").toString(), QString::fromUtf8("<http://example.org/resource1>"));
     QCOMPARE(results[0].binding("p").toString(), QString::fromUtf8("<http://example.org/property>"));

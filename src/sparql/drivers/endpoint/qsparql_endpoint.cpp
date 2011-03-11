@@ -336,7 +336,7 @@ void EndpointResultPrivate::parseResults()
 
     if (q->isGraph()) {
         QSparqlNTriples parser(buffer);
-        results = parser.parse();
+        results = parser.parse<QVector<QSparqlResultRow> >();
     }
 
     terminate();    
