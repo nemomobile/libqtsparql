@@ -621,11 +621,13 @@ int QTrackerDirectResult::size() const
 
 bool QTrackerDirectResult::next()
 {
-    if (d->driverPrivate->isForwardOnly) {
+    bool posAdvanced = QSparqlResult::next();
+    
+    if (d->driverPrivate->isForwardOnly && posAdvanced) {
         d->freeResults.release(1);
     }
     
-    return QSparqlResult::next();
+    return posAdvanced;
 }
 
 QSparqlResultRow QTrackerDirectResult::current() const
