@@ -1073,6 +1073,9 @@ bool QTrackerDirectDriver::open(const QSparqlConnectionOptions& options)
     d->dataReadyInterval = options.dataReadyInterval();
     d->isForwardOnly = options.isForwardOnly();
 
+    if (d->isForwardOnly && d->dataReadyInterval > DATA_READY_BUFFER_SIZE)
+        d->dataReadyInterval = DATA_READY_BUFFER_SIZE;
+
     if (isOpen())
         close();
 
