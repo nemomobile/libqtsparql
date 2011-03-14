@@ -1,5 +1,5 @@
 include(../sparqltest.pri)
-CONFIG += qt warn_on console depend_includepath
+CONFIG += qt warn_on console depend_includepath debug
 QT += testlib
 SOURCES  += tst_qsparql.cpp
 

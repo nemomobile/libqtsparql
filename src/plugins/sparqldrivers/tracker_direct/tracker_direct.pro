@@ -4,9 +4,11 @@ HEADERS		= ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_p.h
 SOURCES		= main.cpp \
 		  ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct.cpp
 
+CONFIG += debug
+
 unix: {
     CONFIG += link_pkgconfig
-    PKGCONFIG += tracker-sparql-0.9
+    PKGCONFIG += tracker-sparql-0.10
 }
 
 include(../qsparqldriverbase.pri)
