@@ -68,6 +68,7 @@ private slots:
     void query_contacts_async_forward_only();
     void query_async_forward_only();
     void query_async_forward_only_results_correct();
+    void query_async_forward_only_results_correct_data();
     
     void ask_contacts();
     void insert_and_delete_contact();
@@ -326,9 +327,12 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
 
 void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 {
+    QFETCH(int, dataReadyInterval1);
+    QFETCH(int, dataReadyInterval2);
+
     QSparqlConnectionOptions opts1;
     opts1.setForwardOnly();
-    opts1.setDataReadyInterval(1);
+    opts1.setDataReadyInterval(dataReadyInterval1);
 
     QSparqlConnection conn1("QTRACKER_DIRECT", opts1);
     // A big query returning a lot of results
@@ -343,7 +347,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
     QTest::qWait(10000);
     
     QSparqlConnectionOptions opts2;
-    opts2.setDataReadyInterval(1);
+    opts2.setDataReadyInterval(dataReadyInterval2);
 
     QSparqlConnection conn2("QTRACKER_DIRECT", opts2);
     // A big query returning a lot of results
@@ -358,6 +362,18 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
     QTest::qWait(10000);
     
     QCOMPARE(results1, results2);
+}
+
+void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct_data()
+{
+    QTest::addColumn<int>("dataReadyInterval1");
+    QTest::addColumn<int>("dataReadyInterval2");
+
+    QTest::newRow("DataReadyMinimum")
+        << 1 << 1;
+
+    QTest::newRow("DataReadyMaximum")
+        << 20 << 20;
 }
 
 void tst_QSparqlTrackerDirect::ask_contacts()
