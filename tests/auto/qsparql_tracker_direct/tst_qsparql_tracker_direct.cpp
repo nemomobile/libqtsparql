@@ -39,6 +39,7 @@
 **
 ****************************************************************************/
 
+#include <QtCore/qstringlist.h>
 #include <QtTest/QtTest>
 #include <QtSparql/QtSparql>
 
@@ -67,6 +68,8 @@ private slots:
     void query_contacts_async();
     void query_contacts_async_forward_only();
     void query_async_forward_only();
+    void query_async_forward_only_results_correct();
+    
     void ask_contacts();
     void insert_and_delete_contact();
     void insert_and_delete_contact_async();
@@ -319,7 +322,7 @@ class ForwardOnlyDataReadyListener : public QObject
 {
     Q_OBJECT
 public:
-    ForwardOnlyDataReadyListener(QSparqlResult* r) : result(r), received(0)
+    ForwardOnlyDataReadyListener(QSparqlResult* r, QStringList* l = 0) : result(r), received(0), list(l)
     {
         connect(r, SIGNAL(dataReady(int)),
                 SLOT(onDataReady(int)));
@@ -329,13 +332,15 @@ public slots:
     {
         // qDebug() << "ForwardOnlyDataReadyListener::onDataReady() tc:" << tc << "result->pos():" << result->pos();
         received = tc;
-        while ((result->pos() + 1) < tc && result->next()) {
-            QSparqlBinding b = result->binding(0);
+        while (result->next()) {
+            if (list != 0)
+                list->append(result->stringValue(0));
         }
     }
 public:
     QSparqlResult* result;
     int received;
+    QStringList* list;
 };
 
 }
@@ -356,6 +361,42 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
 
     ForwardOnlyDataReadyListener listener(r);
     QTest::qWait(3000);
+}
+
+void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
+{
+    QSparqlConnectionOptions opts1;
+    opts1.setForwardOnly();
+    opts1.setDataReadyInterval(1);
+
+    QSparqlConnection conn1("QTRACKER_DIRECT", opts1);
+    // A big query returning a lot of results
+    QSparqlQuery q1("select ?u {?u a rdfs:Resource . }");
+
+    QSparqlResult* r1 = conn1.exec(q1);
+    QVERIFY(r1 != 0);
+    QCOMPARE(r1->hasError(), false);
+
+    QStringList results1;
+    ForwardOnlyDataReadyListener listener1(r1, &results1);
+    QTest::qWait(10000);
+    
+    QSparqlConnectionOptions opts2;
+    opts2.setDataReadyInterval(1);
+
+    QSparqlConnection conn2("QTRACKER_DIRECT", opts2);
+    // A big query returning a lot of results
+    QSparqlQuery q2("select ?u {?u a rdfs:Resource . }");
+
+    QSparqlResult* r2 = conn2.exec(q2);
+    QVERIFY(r2 != 0);
+    QCOMPARE(r2->hasError(), false);
+
+    QStringList results2;
+    ForwardOnlyDataReadyListener listener2(r2, &results2);
+    QTest::qWait(10000);
+    
+    QCOMPARE(results1, results2);
 }
 
 void tst_QSparqlTrackerDirect::ask_contacts()
