@@ -101,7 +101,11 @@ private slots:
     
     void delete_connection_immediately();
     void delete_connection_before_a_wait();
-    
+
+    void go_beyond_columns_number();
+
+    void create_2_connections();
+
     void unsupported_statement_type();
 
     void async_conn_opening();
@@ -1121,7 +1125,7 @@ void tst_QSparqlTrackerDirect::result_immediately_finished2()
 
 void tst_QSparqlTrackerDirect::delete_connection_immediately()
 {
-    QSparqlConnection conn("QTRACKER_DIRECT");
+    // QSparqlConnection conn("QTRACKER_DIRECT");
 }
 
 void tst_QSparqlTrackerDirect::delete_connection_before_a_wait()
