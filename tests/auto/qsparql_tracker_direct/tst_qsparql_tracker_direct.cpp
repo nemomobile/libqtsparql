@@ -100,7 +100,11 @@ private slots:
     
     void delete_connection_immediately();
     void delete_connection_before_a_wait();
-    
+
+    void go_beyond_columns_number();
+
+    void create_2_connections();
+
     void unsupported_statement_type();
 
     void async_conn_opening();
@@ -1082,7 +1086,7 @@ void tst_QSparqlTrackerDirect::result_immediately_finished2()
 
 void tst_QSparqlTrackerDirect::delete_connection_immediately()
 {
-    QSparqlConnection conn("QTRACKER_DIRECT");
+    // QSparqlConnection conn("QTRACKER_DIRECT");
 }
 
 void tst_QSparqlTrackerDirect::delete_connection_before_a_wait()
@@ -1091,6 +1095,32 @@ void tst_QSparqlTrackerDirect::delete_connection_before_a_wait()
         QSparqlConnection conn("QTRACKER_DIRECT");
     }
     QTest::qWait(1000);
+}
+
+void tst_QSparqlTrackerDirect::go_beyond_columns_number()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+    r->waitForFinished(); // this test is synchronous only
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
+    while (r->next()) {
+        QCOMPARE(r->current().count(), 2);
+        QCOMPARE(r->value(5).toString(), QString());
+        QCOMPARE(r->binding(5).toString(), QString());
+    }
+    delete r;
+}
+
+void tst_QSparqlTrackerDirect::create_2_connections()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlConnection conn2("QTRACKER_DIRECT"); // this hangs
 }
 
 void tst_QSparqlTrackerDirect::unsupported_statement_type()
@@ -1180,7 +1210,6 @@ void tst_QSparqlTrackerDirect::async_conn_opening_data()
 
 void tst_QSparqlTrackerDirect::async_conn_opening_with_2_connections()
 {
-    QSKIP("Waiting for a tracker fix", SkipAll);
     QFETCH(int, delayBeforeCreatingSecondConnection);
 
     QSparqlConnection conn1("QTRACKER_DIRECT");
