@@ -358,7 +358,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
 
     QSparqlConnection conn("QTRACKER_DIRECT", opts);
     // A big query returning a lot of results
-    QSparqlQuery q("select ?u {?u a rdfs:Resource . }");
+    QSparqlQuery q("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
 
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);
@@ -379,7 +379,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 
     QSparqlConnection conn1("QTRACKER_DIRECT", opts1);
     // A big query returning a lot of results
-    QSparqlQuery q1("select ?u {?u a rdfs:Resource . }");
+    QSparqlQuery q1("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
 
     QSparqlResult* r1 = conn1.exec(q1);
     QVERIFY(r1 != 0);
@@ -394,7 +394,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 
     QSparqlConnection conn2("QTRACKER_DIRECT", opts2);
     // A big query returning a lot of results
-    QSparqlQuery q2("select ?u {?u a rdfs:Resource . }");
+    QSparqlQuery q2("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
 
     QSparqlResult* r2 = conn2.exec(q2);
     QVERIFY(r2 != 0);
@@ -777,7 +777,7 @@ void tst_QSparqlTrackerDirect::delete_nearly_finished_result()
 
     QSparqlConnection conn("QTRACKER_DIRECT", opts);
     // A big query returning a lot of results
-    QSparqlQuery q("select ?u {?u a rdfs:Resource . }");
+    QSparqlQuery q("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
 
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);

@@ -6,7 +6,10 @@ WHERE
 {
     ?u nie:isLogicalPartOf <qsparql-tracker-direct-tests> .
 }
+
 DELETE
 {
     <qsparql-tracker-direct-tests> a rdfs:Resource .
 }
+
+
