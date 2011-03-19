@@ -113,6 +113,10 @@ private slots:
     void async_conn_opening_with_2_connections_data();
     void async_conn_opening_for_update();
     void async_conn_opening_for_update_data();
+
+private:
+    bool createTestData(int testDataAmount);
+    void cleanupTestData();
 };
 
 namespace {
@@ -154,10 +158,13 @@ void tst_QSparqlTrackerDirect::initTestCase()
     // normal and vpath builds.
     QCoreApplication::addLibraryPath("../../../plugins");
     qInstallMsgHandler(myMessageOutput);
+    cleanupTestData();
+    createTestData(2000);
 }
 
 void tst_QSparqlTrackerDirect::cleanupTestCase()
 {
+    cleanupTestData();
 }
 
 void tst_QSparqlTrackerDirect::init()
@@ -319,7 +326,8 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
 
     QSparqlConnection conn("QTRACKER_DIRECT", opts);
     // A big query returning a lot of results
-    QSparqlQuery q("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
+    QSparqlQuery q("select ?n {?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-bulk-tests> .}");
 
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);
@@ -340,7 +348,8 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 
     QSparqlConnection conn1("QTRACKER_DIRECT", opts1);
     // A big query returning a lot of results
-    QSparqlQuery q1("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
+    QSparqlQuery q1("select ?n {?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-bulk-tests> .}");
 
     QSparqlResult* r1 = conn1.exec(q1);
     QVERIFY(r1 != 0);
@@ -355,7 +364,8 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 
     QSparqlConnection conn2("QTRACKER_DIRECT", opts2);
     // A big query returning a lot of results
-    QSparqlQuery q2("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
+    QSparqlQuery q2("select ?n {?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-bulk-tests> .}");
 
     QSparqlResult* r2 = conn2.exec(q2);
     QVERIFY(r2 != 0);
@@ -738,7 +748,8 @@ void tst_QSparqlTrackerDirect::delete_nearly_finished_result()
 
     QSparqlConnection conn("QTRACKER_DIRECT", opts);
     // A big query returning a lot of results
-    QSparqlQuery q("select ?n { ?u a nco:PersonContact ; nco:nameGiven ?n }");
+    QSparqlQuery q("select ?n {?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-bulk-tests> .}");
 
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);
@@ -1368,6 +1379,114 @@ void tst_QSparqlTrackerDirect::async_conn_opening_for_update_data()
 
     QTest::newRow("BeforeAndAfterConnOpened")
         << 0 << 2000;
+}
+
+bool tst_QSparqlTrackerDirect::createTestData(int testDataAmount)
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+
+    const QString insertQuery =
+        "INSERT {"
+        "<qsparql-tracker-direct-tests> a nie:InformationElement ."
+        "<qsparql-tracker-direct-bulk-tests> a nie:InformationElement ."
+
+        "<uri001> a nco:PersonContact, nie:InformationElement ;"
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+            "nco:nameGiven \"name001\" ."
+
+        "<uri002> a nco:PersonContact, nie:InformationElement ;"
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+            "nco:nameGiven \"name002\" ."
+
+        "<uri003> a nco:PersonContact, nie:InformationElement ;"
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+            "nco:nameGiven \"name003\" ."
+
+        "<uri004> a nie:DataObject , nie:InformationElement ;"
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+            "tracker:available true ."
+
+        "<uri005> a nie:DataObject , nie:InformationElement ;"
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+            "tracker:available false ."
+        "}";
+
+    QSparqlResult* r1 = conn.syncExec(QSparqlQuery(insertQuery, QSparqlQuery::InsertStatement));
+    if (r1->hasError()) {
+        qWarning() << "createTestData() failed:" << r1->lastError() << insertQuery;
+        return false;
+    }
+
+    const QString insertQueryTemplate =
+        "_:u%1 a nco:PersonContact, nie:InformationElement ; "
+            "nie:isLogicalPartOf <qsparql-tracker-direct-bulk-tests> ;"
+            "nco:nameGiven \"Given%1\" ; "
+            "nco:nameFamily \"Family%1\" . ";
+
+    const int insertBatchSize   = 200;
+
+    for (int item = 1; item <= testDataAmount; ) {
+        QString insertQuery = "INSERT { ";
+        const int batchEnd = item + insertBatchSize;
+
+        for (; item < batchEnd && item <= testDataAmount; ++item) {
+            insertQuery.append(insertQueryTemplate.arg(item));
+        }
+
+        insertQuery.append(" }");
+        QSparqlResult* r2 = conn.syncExec(QSparqlQuery(insertQuery, QSparqlQuery::InsertStatement));
+        if (r2->hasError()) {
+            qWarning() << "createTestData() failed:" << r2->lastError() << insertQuery;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void tst_QSparqlTrackerDirect::cleanupTestData()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+
+    const QString deleteQuery1 =
+        "DELETE { ?u a rdfs:Resource . } "
+        "WHERE { ?u nie:isLogicalPartOf <qsparql-tracker-direct-tests> . }";
+
+    QSparqlResult* r1 = conn.syncExec(QSparqlQuery(deleteQuery1, QSparqlQuery::DeleteStatement));
+    if (r1->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r1->lastError() << deleteQuery1;
+        return;
+    }
+
+    const QString deleteQuery2 =
+        "DELETE { <qsparql-tracker-direct-tests> a rdfs:Resource . }";
+
+    QSparqlResult* r2 = conn.syncExec(QSparqlQuery(deleteQuery2, QSparqlQuery::DeleteStatement));
+    if (r2->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r2->lastError() << deleteQuery2;
+        return;
+    }
+
+    const QString deleteQuery3 =
+        "DELETE { ?u a rdfs:Resource . } "
+        "WHERE { ?u nie:isLogicalPartOf <qsparql-tracker-direct-bulk-tests> . }";
+
+    QSparqlResult* r3 = conn.syncExec(QSparqlQuery(deleteQuery3, QSparqlQuery::DeleteStatement));
+    if (r3->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r3->lastError() << deleteQuery3;
+        return;
+    }
+
+    const QString deleteQuery4 =
+        "DELETE { <qsparql-tracker-direct-bulk-tests> a rdfs:Resource . }";
+
+    QSparqlResult* r4 = conn.syncExec(QSparqlQuery(deleteQuery4, QSparqlQuery::DeleteStatement));
+    if (r4->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r4->lastError() << deleteQuery4;
+        return;
+    }
+
+    return;
 }
 
 QTEST_MAIN( tst_QSparqlTrackerDirect )
