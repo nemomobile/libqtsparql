@@ -171,6 +171,14 @@ public:
     QVirtuosoDriverPrivate *driverPrivate;
     QAtomicInt isFinished;
     int size;
+    QVector<QSparqlResultRow> results;
+
+    inline void clearValues()
+    {
+        QSparqlResultRow resultRow;
+        results.append(resultRow);
+        resultColIdx = 0;
+    }
 
     bool isStmtHandleValid() { return disconnectCount == driver->d->disconnectCount; }
     void updateStmtHandleState() { disconnectCount = driver->d->disconnectCount; }
@@ -386,20 +394,6 @@ void QVirtuosoAsyncResult::waitForFinished()
     if (d->isFinished == 1)
         return;
 
-    if (!d->driver->isOpen()) {
-        setLastError(QSparqlError(QLatin1String("Connection open failed"),
-                                  QSparqlError::ConnectionError));
-        terminate();
-        return;
-    }
-
-    if (d->driverPrivate->isForwardOnly) {
-        setLastError(QSparqlError(QLatin1String("QSparqlResult::waitForFinished() cannot be used with 'forward only' connections"),
-                                          QSparqlError::ConnectionError));
-        terminate();
-        return;
-    }
-
     startFetcher();
     da->fetcher->wait();
 }
@@ -546,20 +540,7 @@ bool QVirtuosoAsyncResult::fetchNextResult()
 
     }
 
-    if (d->driverPrivate->isForwardOnly) {
-        qDebug() << Q_FUNC_INFO << "About to acquire free result, available:" << d->availableResultEntries.available();
-        d->availableResultEntries.acquire(1);
-    }
-
     QMutexLocker resultLocker(&(da->resultMutex));
-
-    if (d->driverPrivate->isForwardOnly) {
-        if (d->results.count() == d->driverPrivate->dataReadyBufferSize) {
-            d->results.removeFirst();
-            d->resultsBase++;
-        }
-    }
-
     d->clearValues();
 
     for (d->resultColIdx = 1; d->resultColIdx <= d->numResultCols; ++(d->resultColIdx)) {
@@ -591,15 +572,7 @@ bool QVirtuosoAsyncResult::fetchGraphResult()
 
 bool QVirtuosoAsyncResult::next()
 {
-    bool posAdvanced = QSparqlResult::next();
-
-    if (d->driverPrivate->isForwardOnly && posAdvanced) {
-        d->availableResultEntries.release(1);
-        qDebug() << Q_FUNC_INFO << "Free results available:" << d->availableResultEntries.available();
-
-    }
-
-    return posAdvanced;
+    return QSparqlResult::next();
 }
 
 QSparqlBinding QVirtuosoAsyncResult::binding(int field) const
@@ -636,7 +609,7 @@ QVariant QVirtuosoAsyncResult::value(int field) const
 int QVirtuosoAsyncResult::size() const
 {
     QMutexLocker resultLocker(&(da->resultMutex));
-    return resultsCount();
+    return d->results.count();
 }
 
 QSparqlResultRow QVirtuosoAsyncResult::current() const
@@ -718,6 +691,10 @@ bool QVirtuosoResult::next()
         if (r != SQL_NO_DATA)
             setLastError(qMakeError(QCoreApplication::translate("QVirtuosoResult",
                 "Unable to fetch next"), QSparqlError::BackendError, d));
+
+        QSparqlResult::next();
+        terminate();
+        return false;
     }
 
     return QSparqlResult::next();
@@ -808,7 +785,7 @@ bool QVirtuosoResult::fetchGraphResult(SQLRETURN r)
     if (retval.name().toUpper() == QLatin1String("FMTAGGRET-NT")) {
         QByteArray buffer = retval.value().toString().toLatin1();
         QSparqlNTriples parser(buffer);
-        d->results = parser.parse<QList<QSparqlResultRow> >();
+        d->results = parser.parse();
     }
 
     terminate();
