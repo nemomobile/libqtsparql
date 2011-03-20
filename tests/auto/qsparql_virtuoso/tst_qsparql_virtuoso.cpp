@@ -75,6 +75,8 @@ private slots:
     void iterate_on_dataready();
 
 private:
+    bool createTestData(int testDataAmount);
+    void cleanupTestData();
     int previousTotalResults;
 };
 
@@ -91,10 +93,13 @@ void tst_QSparqlVirtuoso::initTestCase()
     // For running the test without installing the plugins. Should work in
     // normal and vpath builds.
     QCoreApplication::addLibraryPath("../../../plugins");
+    cleanupTestData();
+    createTestData(2000);
 }
 
 void tst_QSparqlVirtuoso::cleanupTestCase()
 {
+    cleanupTestData();
 }
 
 void tst_QSparqlVirtuoso::init()
@@ -132,7 +137,8 @@ void tst_QSparqlVirtuoso::query_contacts()
     r = conn.exec(q);
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
-    r->waitForFinished(); // this test is syncronous only
+    r->waitForFinished(); // this test is synchronous only
+    qWarning() << "lastError:" << r->lastError();
     QCOMPARE(r->hasError(), false);
     QCOMPARE(r->size(), 3);
     QHash<QString, QString> contactNames;
@@ -420,6 +426,161 @@ void tst_QSparqlVirtuoso::iterate_on_dataready()
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
     QCOMPARE(r->hasError(), false);
+}
+
+bool tst_QSparqlVirtuoso::createTestData(int testDataAmount)
+{
+    QSparqlConnectionOptions options;
+    options.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    options.setPort(TEST_PORT);
+    QSparqlConnection conn("QVIRTUOSO", options);
+    conn.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+    conn.addPrefix("foaf", QUrl("http://xmlns.com/foaf/0.1/"));
+    QTest::qWait(1000);
+
+    const QString insertQuery =
+        "INSERT INTO <http://virtuoso/testgraph> "
+        "{"
+            "<qsparql-virtuoso-tests> a nie:InformationElement ."
+
+            "<uri001> a nco:PersonContact, nie:InformationElement ;"
+                "nie:isLogicalPartOf <qsparql-virtuoso-tests> ;"
+                "nco:nameGiven \"name001\" ."
+
+            "<uri002> a nco:PersonContact, nie:InformationElement ;"
+                "nie:isLogicalPartOf <qsparql-virtuoso-tests> ;"
+                "nco:nameGiven \"name002\" ."
+
+            "<uri003> a nco:PersonContact, nie:InformationElement ;"
+                "nie:isLogicalPartOf <qsparql-virtuoso-tests> ;"
+                "nco:nameGiven \"name003\" ."
+
+            "<thing001> a nie:InformationElement ;"
+                "<string_property> \"A string\"^^<http://www.w3.org/2001/XMLSchema#string> ;"
+                "<string_language_tag_property> \"Una cadena\"@es ;"
+                "<string_tab_property> \"A string \\\\t with tab\"^^<http://www.w3.org/2001/XMLSchema#string> ;"
+                "<string_newline_property> \"A string \\\\n with newline\"^^<http://www.w3.org/2001/XMLSchema#string> ;"
+                "<string_carriage_return_property> \"A string \\\\r with carriage return\"^^<http://www.w3.org/2001/XMLSchema#string> ;"
+                "<string_backspace_property> \"A string \\\\b with backspace\"^^<http://www.w3.org/2001/XMLSchema#string> ;"
+                "<string_single_quote_property> \"\"\"A string ' with single quote\"\"\";"
+                "<string_double_quote_property> '''A string \" with double quote''' ;"
+                "<string_backslash_property> \"A string \\\\\\\\ with backslash\"^^<http://www.w3.org/2001/XMLSchema#string> ;"
+                "<integer_property> \"-1234\"^^<http://www.w3.org/2001/XMLSchema#integer> ;"
+                "<int_property> \"5678\"^^<http://www.w3.org/2001/XMLSchema#int> ;"
+                "<nonNegativeInteger_property> \"9012\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> ;"
+                "<date_property> \"2010-11-30T12:30:59\"^^<http://www.w3.org/2001/XMLSchema#date> ;"
+                "<date_negative_timezone_property> \"2010-11-30T12:30:59-01:00\"^^<http://www.w3.org/2001/XMLSchema#date> ;"
+                "<date_positive_timezone_property> \"2010-11-30T12:30:59+01:00\"^^<http://www.w3.org/2001/XMLSchema#date> ;"
+                "<time_property> \"12:30:59\"^^<http://www.w3.org/2001/XMLSchema#time> ;"
+                "<time_negative_timezone_property> \"12:30:59-01:00\"^^<http://www.w3.org/2001/XMLSchema#time> ;"
+                "<time_positive_timezone_property> \"12:30:59+01:00\"^^<http://www.w3.org/2001/XMLSchema#time> ;"
+                "<dateTime_property> \"2010-11-30T12:30:59\"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;"
+                "<dateTime_negative_timezone_property> \"2010-11-30T12:30:59-01:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;"
+                "<dateTime_positive_timezone_property> \"2010-11-30T12:30:59+01:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> ;"
+                "<decimal_property> \"1234.56\"^^<http://www.w3.org/2001/XMLSchema#decimal> ;"
+                "<short_property> \"4567\"^^<http://www.w3.org/2001/XMLSchema#short> ;"
+                "<long_property> \"123456789\"^^<http://www.w3.org/2001/XMLSchema#long> ;"
+                "<boolean_property> \"true\"^^<http://www.w3.org/2001/XMLSchema#boolean> ;"
+                "<double_property> \"4567.123\"^^<http://www.w3.org/2001/XMLSchema#double> ;"
+                "<float_property> \"123.45\"^^<http://www.w3.org/2001/XMLSchema#float> ;"
+                "<base64Binary_property> \"qouh3908t38hohfr\"^^<http://www.w3.org/2001/XMLSchema#base64Binary> ."
+
+            "_:a    foaf:givenname   \"Alice\" ."
+            "_:a    foaf:family_name \"Hacker\" ."
+
+            "_:b    foaf:firstname   \"Bob\" ."
+            "_:b    foaf:surname     \"Hacker\" ."
+        "}";
+
+    QSparqlResult* r1 = conn.syncExec(QSparqlQuery(insertQuery, QSparqlQuery::InsertStatement));
+    if (r1->hasError()) {
+        qWarning() << "createTestData() failed:" << r1->lastError() << insertQuery;
+        return false;
+    }
+
+    return true;
+}
+
+void tst_QSparqlVirtuoso::cleanupTestData()
+{
+    QSparqlConnectionOptions options;
+    options.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    options.setPort(TEST_PORT);
+    QSparqlConnection conn("QVIRTUOSO", options);
+    conn.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+    conn.addPrefix("foaf", QUrl("http://xmlns.com/foaf/0.1/"));
+
+    const QString deleteQuery1 =
+        "DELETE from <http://virtuoso/testgraph> "
+        "{"
+            "?u a rdfs:Resource ."
+        "}"
+        "WHERE"
+        "{"
+            "?u nie:isLogicalPartOf <qsparql-virtuoso-tests> ."
+        "}";
+
+    QSparqlResult* r1 = conn.syncExec(QSparqlQuery(deleteQuery1, QSparqlQuery::DeleteStatement));
+    if (r1->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r1->lastError() << deleteQuery1;
+        return;
+    }
+
+    const QString deleteQuery2 =
+        "DELETE from <http://virtuoso/testgraph> "
+        "{"
+            "<qsparql-virtuoso-tests> a rdfs:Resource ."
+        "}";
+
+    QSparqlResult* r2 = conn.syncExec(QSparqlQuery(deleteQuery2, QSparqlQuery::DeleteStatement));
+    if (r2->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r2->lastError() << deleteQuery2;
+        return;
+    }
+
+    const QString deleteQuery3 =
+        "DELETE from <http://virtuoso/testgraph> "
+        "{"
+            "<thing001> ?p ?o ."
+        "}"
+        "WHERE"
+        "{"
+            "<thing001> ?p ?o ."
+        "}";
+
+    QSparqlResult* r3 = conn.syncExec(QSparqlQuery(deleteQuery3, QSparqlQuery::DeleteStatement));
+    if (r3->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r3->lastError() << deleteQuery3;
+        return;
+    }
+
+    const QString deleteQuery4 =
+        "DELETE from <http://virtuoso/testgraph> "
+        "{"
+            "?a   foaf:givenname   \"Alice\" ."
+            "?a    foaf:family_name \"Hacker\" ."
+
+            "?b    foaf:firstname   \"Bob\" ."
+            "?b    foaf:surname     \"Hacker\" ."
+        "}"
+        "WHERE"
+        "{"
+            "?a    foaf:givenname   \"Alice\" ."
+            "?a    foaf:family_name \"Hacker\" ."
+
+            "?b    foaf:firstname   \"Bob\" ."
+            "?b    foaf:surname     \"Hacker\" ."
+        "}";
+
+    QSparqlResult* r4 = conn.syncExec(QSparqlQuery(deleteQuery4, QSparqlQuery::DeleteStatement));
+    if (r4->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r4->lastError() << deleteQuery4;
+        return;
+    }
+
+    return;
 }
 
 QTEST_MAIN( tst_QSparqlVirtuoso )
