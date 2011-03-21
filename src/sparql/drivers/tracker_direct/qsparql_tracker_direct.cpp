@@ -196,7 +196,7 @@ public:
     // is using the connection to make tracker queries. This mutex
     // probably isn't needed as a TrackerSparqlConnection is
     // already thread safe.
-    QMutex mutex;
+    QMutex connectionMutex;
     QTrackerDirectDriver *driver;
     bool asyncOpenCalled;
     QString error;
@@ -234,7 +234,7 @@ public:
     bool fetcherStarted;
     // This mutex is for ensuring that only one thread at a time is accessing
     // the member variables of this class (mainly: "results" and "cursor").
-    QMutex mutex;
+    QMutex resultMutex;
 };
 
 class QTrackerDirectUpdateResultPrivate : public QObject {
@@ -291,7 +291,7 @@ QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult
                                                             QTrackerDirectFetcherPrivate *f)
   : cursor(0), resultsBase(0),
   q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
-  mutex(QMutex::Recursive)
+  resultMutex(QMutex::Recursive)
 {
     freeResults.release(DATA_READY_BUFFER_SIZE - 1);
 }
@@ -319,7 +319,7 @@ int QTrackerDirectResultPrivate::resultsPos()
 
 void QTrackerDirectResultPrivate::terminate()
 {
-    QMutexLocker resultLocker(&mutex);
+    QMutexLocker resultLocker(&resultMutex);
 
     if (resultsCount() % driverPrivate->dataReadyInterval != 0) {
         dataReady(resultsCount());
@@ -387,7 +387,7 @@ void QTrackerDirectResult::exec()
 
 void QTrackerDirectResult::startFetcher()
 {
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
     if (!d->fetcherStarted) {
         d->fetcherStarted = true;
         d->fetcher->start();
@@ -396,7 +396,7 @@ void QTrackerDirectResult::startFetcher()
 
 bool QTrackerDirectResult::runQuery()
 {
-    QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
+    QMutexLocker connectionLocker(&(d->driverPrivate->connectionMutex));
 
     GError * error = 0;
     d->cursor = tracker_sparql_connection_query(    d->driverPrivate->connection,
@@ -404,7 +404,7 @@ bool QTrackerDirectResult::runQuery()
                                                     0,
                                                     &error );
     if (error != 0 || d->cursor == 0) {
-        QMutexLocker resultLocker(&(d->mutex));
+        QMutexLocker resultLocker(&(d->resultMutex));
         QSparqlError e(QString::fromUtf8(error ? error->message : "unknown error"),
                         QSparqlError::StatementError,
                         error ? error->code : -1);
@@ -421,13 +421,13 @@ bool QTrackerDirectResult::runQuery()
 
 bool QTrackerDirectResult::fetchNextResult()
 {
-    QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
+    QMutexLocker connectionLocker(&(d->driverPrivate->connectionMutex));
 
     GError * error = 0;
     gboolean active = tracker_sparql_cursor_next(d->cursor, 0, &error);
 
     if (error != 0) {
-        QMutexLocker resultLocker(&(d->mutex));
+        QMutexLocker resultLocker(&(d->resultMutex));
         QSparqlError e(QString::fromUtf8(error->message),
                        errorCodeToType(error->code),
                        error->code);
@@ -448,7 +448,7 @@ bool QTrackerDirectResult::fetchNextResult()
         d->freeResults.acquire(1);
     }
 
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
     
     if (d->driverPrivate->isForwardOnly) {
         if (d->results.count() == DATA_READY_BUFFER_SIZE) {
@@ -483,13 +483,13 @@ bool QTrackerDirectResult::fetchNextResult()
 
 bool QTrackerDirectResult::fetchBoolResult()
 {
-    QMutexLocker connectionLocker(&(d->driverPrivate->mutex));
+    QMutexLocker connectionLocker(&(d->driverPrivate->connectionMutex));
 
     GError * error = 0;
     tracker_sparql_cursor_next(d->cursor, 0, &error);
     
     if (error != 0) {
-        QMutexLocker resultLocker(&(d->mutex));
+        QMutexLocker resultLocker(&(d->resultMutex));
         QSparqlError e(QString::fromUtf8(error->message),
                        errorCodeToType(error->code),
                        error->code);
@@ -500,7 +500,7 @@ bool QTrackerDirectResult::fetchBoolResult()
         return false;
     }
 
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
 
     if (tracker_sparql_cursor_get_n_columns(d->cursor) == 1)  {
         QString value = QString::fromUtf8(tracker_sparql_cursor_get_string(d->cursor, 0, 0));
@@ -519,7 +519,7 @@ bool QTrackerDirectResult::fetchBoolResult()
 
 QSparqlBinding QTrackerDirectResult::binding(int field) const
 {
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
 
     if (!isValid()) {
         return QSparqlBinding();
@@ -548,7 +548,7 @@ QSparqlBinding QTrackerDirectResult::binding(int field) const
 
 QVariant QTrackerDirectResult::value(int field) const
 {
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
 
     if (!isValid()) {
         return QVariant();
@@ -566,7 +566,7 @@ QVariant QTrackerDirectResult::value(int field) const
 
 QString QTrackerDirectResult::stringValue(int field) const
 {
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
 
     if (!isValid()) {
         return QString();
@@ -615,7 +615,7 @@ void QTrackerDirectResult::terminate()
 
 int QTrackerDirectResult::size() const
 {
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
     return d->resultsCount();
 }
 
@@ -632,7 +632,7 @@ bool QTrackerDirectResult::next()
 
 QSparqlResultRow QTrackerDirectResult::current() const
 {
-    QMutexLocker resultLocker(&(d->mutex));
+    QMutexLocker resultLocker(&(d->resultMutex));
 
     if (!isValid()) {
         return QSparqlResultRow();
@@ -1018,7 +1018,7 @@ async_open_callback(GObject         * /*source_object*/,
 }
 
 QTrackerDirectDriverPrivate::QTrackerDirectDriverPrivate(QTrackerDirectDriver *driver)
-    : connection(0), dataReadyInterval(1), mutex(QMutex::Recursive), driver(driver),
+    : connection(0), dataReadyInterval(1), connectionMutex(QMutex::Recursive), driver(driver),
       asyncOpenCalled(false)
 {
 }
@@ -1070,7 +1070,7 @@ bool QTrackerDirectDriver::hasFeature(QSparqlConnection::Feature f) const
 
 bool QTrackerDirectDriver::open(const QSparqlConnectionOptions& options)
 {
-    QMutexLocker connectionLocker(&(d->mutex));
+    QMutexLocker connectionLocker(&(d->connectionMutex));
 
     d->dataReadyInterval = options.dataReadyInterval();
     d->isForwardOnly = options.isForwardOnly();
@@ -1090,7 +1090,7 @@ bool QTrackerDirectDriver::open(const QSparqlConnectionOptions& options)
 
 void QTrackerDirectDriver::close()
 {
-    QMutexLocker connectionLocker(&(d->mutex));
+    QMutexLocker connectionLocker(&(d->connectionMutex));
 
     if (!d->asyncOpenCalled) {
         QEventLoop loop;
