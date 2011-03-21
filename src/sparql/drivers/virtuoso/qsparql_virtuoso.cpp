@@ -389,6 +389,13 @@ void QVirtuosoAsyncResult::waitForFinished()
     if (d->isFinished == 1)
         return;
 
+    if (!d->driver->isOpen()) {
+        setLastError(QSparqlError(QLatin1String("Connection open failed"),
+                                  QSparqlError::ConnectionError));
+        terminate();
+        return;
+    }
+
     startFetcher();
     da->fetcher->wait();
 }
