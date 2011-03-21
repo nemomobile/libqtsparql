@@ -234,13 +234,15 @@ void QSparqlConnectionOptions::setDataReadyInterval(int interval)
 
 /*!
     Convenience function for setting the driver to forward only mode using
-    a fixed size buffer.
+    a buffer to hold a limited number of result rows. The buffer size, in result
+    rows, is set to be twice the dataReadyInterval.
     Normally all results are held in a buffer in the QSparqlResult, but this
     option allows results to be discarded once they have been read with
     QSparqlResult::next(). If the buffer is full, then the QSparql driver will
-    wait until there is room in the buffer before resuming the query.
+    wait until there is room in the buffer before resuming fetching results for
+    the query.
 
-    \sa setOption()
+    \sa setOption() setDataReadyInterval() dataReadyInterval()
 */
 void QSparqlConnectionOptions::setForwardOnly()
 {
