@@ -655,6 +655,11 @@ QVirtuosoResult::~QVirtuosoResult()
 
 bool QVirtuosoResult::next()
 {
+    // For CONSTRUCT queries, the results have already
+    // been fetched
+    if (isGraph())
+        return QSparqlResult::next();
+
     SQLRETURN r;
     r = SQLFetch(d->hstmt);
 
