@@ -57,8 +57,6 @@
 
 #include <QtCore/qdebug.h>
 
-#define DATA_READY_BUFFER_SIZE 21
-
 QT_BEGIN_NAMESPACE
 
 namespace XSD {
@@ -216,6 +214,7 @@ public:
 
     TrackerSparqlConnection *connection;
     int dataReadyInterval;
+    int dataReadyBufferSize;
     bool isForwardOnly;
     // This mutex is for ensuring that only one thread at a time
     // is using the connection to make tracker queries. This mutex
@@ -315,7 +314,7 @@ QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult
   q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
   resultMutex(QMutex::Recursive)
 {
-    freeResults.release(DATA_READY_BUFFER_SIZE - 1);
+    freeResults.release(driverPrivate->dataReadyBufferSize - 1);
 }
 
 QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
@@ -470,15 +469,15 @@ bool QTrackerDirectResult::fetchNextResult()
         return false;
     }
 
-
     if (d->driverPrivate->isForwardOnly) {
+        // qDebug() << "About to acquire free result, available:" << d->freeResults.available();
         d->freeResults.acquire(1);
     }
 
     QMutexLocker resultLocker(&(d->resultMutex));
     
     if (d->driverPrivate->isForwardOnly) {
-        if (d->results.count() == DATA_READY_BUFFER_SIZE) {
+        if (d->results.count() == d->driverPrivate->dataReadyBufferSize) {
             d->results.removeFirst();
             d->resultsBase++;
         }
@@ -601,6 +600,13 @@ void QTrackerDirectResult::waitForFinished()
     if (d->isFinished == 1)
         return;
 
+    if (d->driverPrivate->isForwardOnly) {
+        setLastError(QSparqlError(QLatin1String("QSparqlResult::waitForFinished() cannot be used with 'forward only' connections"),
+                                          QSparqlError::ConnectionError));
+        d->terminate();
+        return;
+    }
+
     // We first need the connection to be ready before doing anything
     if (!d->driverPrivate->asyncOpenCalled) {
         QEventLoop loop;
@@ -634,6 +640,8 @@ bool QTrackerDirectResult::next()
     
     if (d->driverPrivate->isForwardOnly && posAdvanced) {
         d->freeResults.release(1);
+        // qDebug() << "Free results available:" << d->freeResults.available();
+
     }
     
     return posAdvanced;
@@ -1056,10 +1064,8 @@ bool QTrackerDirectDriver::open(const QSparqlConnectionOptions& options)
     QMutexLocker connectionLocker(&(d->connectionMutex));
 
     d->dataReadyInterval = options.dataReadyInterval();
+    d->dataReadyBufferSize = d->dataReadyInterval * 2;
     d->isForwardOnly = options.isForwardOnly();
-
-    if (d->isForwardOnly && d->dataReadyInterval > DATA_READY_BUFFER_SIZE)
-        d->dataReadyInterval = DATA_READY_BUFFER_SIZE;
 
     if (isOpen())
         close();
