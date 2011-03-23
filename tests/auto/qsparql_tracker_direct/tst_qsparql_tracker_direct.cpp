@@ -63,12 +63,11 @@ public slots:
 
 private slots:
     void query_contacts();
-    void query_contacts_forward_only();
+    void query_forward_only_wait_for_finished();
     void query_contacts_async();
-    void query_contacts_async_forward_only();
     void query_async_forward_only();
-    void query_async_forward_only_results_correct();
-    void query_async_forward_only_results_correct_data();
+    void query_async_forward_only_large_result_set();
+    void query_async_forward_only_large_result_set_data();
     
     void ask_contacts();
     void insert_and_delete_contact();
@@ -200,7 +199,7 @@ void tst_QSparqlTrackerDirect::query_contacts()
     delete r;
 }
 
-void tst_QSparqlTrackerDirect::query_contacts_forward_only()
+void tst_QSparqlTrackerDirect::query_forward_only_wait_for_finished()
 {
     QSparqlConnectionOptions opts;
     opts.setForwardOnly();
@@ -225,40 +224,6 @@ void tst_QSparqlTrackerDirect::query_contacts_async()
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
-
-    QSignalSpy spy(r, SIGNAL(finished()));
-    while (spy.count() == 0) {
-        QTest::qWait(100);
-    }
-
-    QCOMPARE(spy.count(), 1);
-
-    QCOMPARE(r->hasError(), false);
-    QCOMPARE(r->size(), 3);
-    QHash<QString, QString> contactNames;
-    while (r->next()) {
-        QCOMPARE(r->current().count(), 2);
-        contactNames[r->value(0).toString()] = r->value(1).toString();
-    }
-    QCOMPARE(contactNames.size(), 3);
-    QCOMPARE(contactNames["uri001"], QString("name001"));
-    QCOMPARE(contactNames["uri002"], QString("name002"));
-    QCOMPARE(contactNames["uri003"], QString("name003"));
-    delete r;
-}
-
-void tst_QSparqlTrackerDirect::query_contacts_async_forward_only()
-{
-    QSparqlConnectionOptions opts;
-    opts.setForwardOnly();
-    QSparqlConnection conn("QTRACKER_DIRECT", opts);
-    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
-                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
-                   "nco:nameGiven ?ng .}");
-    QSparqlResult* r = conn.exec(q);
-    QVERIFY(r != 0);
-    QCOMPARE(r->hasError(), false);
-    return;
 
     QSignalSpy spy(r, SIGNAL(finished()));
     while (spy.count() == 0) {
@@ -325,12 +290,11 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
     QCOMPARE(r->hasError(), false);
 
     ForwardOnlyDataReadyListener listener(r);
-    QTest::qWait(20000);
-    qWarning() << "Returned from qWait(20000)";
+    QTest::qWait(30000);
     QCOMPARE(r->isFinished(), true);
 }
 
-void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
+void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set()
 {
     QFETCH(int, dataReadyInterval1);
     QFETCH(int, dataReadyInterval2);
@@ -350,7 +314,8 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 
     QStringList results1;
     ForwardOnlyDataReadyListener listener1(r1, &results1);
-    QTest::qWait(10000);
+    QTest::qWait(30000);
+    QCOMPARE(r1->isFinished(), true);
     
     QSparqlConnectionOptions opts2;
     opts2.setDataReadyInterval(dataReadyInterval2);
@@ -366,12 +331,13 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
 
     QStringList results2;
     ForwardOnlyDataReadyListener listener2(r2, &results2);
-    QTest::qWait(10000);
+    QTest::qWait(30000);
+    QCOMPARE(r2->isFinished(), true);
     
     QCOMPARE(results1, results2);
 }
 
-void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct_data()
+void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set_data()
 {
     QTest::addColumn<int>("dataReadyInterval1");
     QTest::addColumn<int>("dataReadyInterval2");
