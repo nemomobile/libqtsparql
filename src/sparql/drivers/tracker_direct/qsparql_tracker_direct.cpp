@@ -316,7 +316,8 @@ QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult
   q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
   resultMutex(QMutex::Recursive)
 {
-    availableResultEntries.release(driverPrivate->dataReadyBufferSize - 1);
+    if (driverPrivate->isForwardOnly)
+        availableResultEntries.release(driverPrivate->dataReadyBufferSize - 1);
 }
 
 QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
