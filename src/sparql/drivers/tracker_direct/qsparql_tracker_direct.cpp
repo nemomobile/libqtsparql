@@ -220,10 +220,10 @@ public:
 
     // These two fields are only used by the isForwardOnly option
     //  - resultsBase: count of the number of results deleted
-    //  - freeResults: number of free entries in the results buffer,
+    //  - availableResultEntries: number of free entries in the results buffer,
     //      and the fetcher thread will wait until it is at least 1
     int resultsBase;
-    QSemaphore freeResults;
+    QSemaphore availableResultEntries;
 
     QAtomicInt isFinished;
 
@@ -294,7 +294,7 @@ QTrackerDirectResultPrivate::QTrackerDirectResultPrivate(   QTrackerDirectResult
   q(result), driverPrivate(dpp), fetcher(f), fetcherStarted(false),
   resultMutex(QMutex::Recursive)
 {
-    freeResults.release(driverPrivate->dataReadyBufferSize - 1);
+    availableResultEntries.release(driverPrivate->dataReadyBufferSize - 1);
 }
 
 QTrackerDirectResultPrivate::~QTrackerDirectResultPrivate()
@@ -364,6 +364,15 @@ QTrackerDirectResult::~QTrackerDirectResult()
 {
     if (d->fetcher->isRunning()) {
         d->isFinished = 1;
+
+        // In ForwardOnly mode, if a result has been deleted while still
+        // running, it is possible that the fetcher thread is waiting on the
+        // semaphore to get an available result entry. So release an entry
+        // to allow the thread to complete the call to fetchNextResult() and
+        // terminate correctly
+        if (d->driverPrivate->isForwardOnly)
+            d->availableResultEntries.release(1);
+
         d->fetcher->wait();
     }
 
@@ -445,8 +454,8 @@ bool QTrackerDirectResult::fetchNextResult()
     }
 
     if (d->driverPrivate->isForwardOnly) {
-        // qDebug() << "About to acquire free result, available:" << d->freeResults.available();
-        d->freeResults.acquire(1);
+        // qDebug() << "About to acquire free result, available:" << d->availableResultEntries.available();
+        d->availableResultEntries.acquire(1);
     }
 
     QMutexLocker resultLocker(&(d->resultMutex));
@@ -632,8 +641,8 @@ bool QTrackerDirectResult::next()
     bool posAdvanced = QSparqlResult::next();
     
     if (d->driverPrivate->isForwardOnly && posAdvanced) {
-        d->freeResults.release(1);
-        // qDebug() << "Free results available:" << d->freeResults.available();
+        d->availableResultEntries.release(1);
+        // qDebug() << "Free results available:" << d->availableResultEntries.available();
 
     }
     
