@@ -75,12 +75,12 @@ public:
     QString parseLanguageTag();
     QSparqlBinding parseLiteral(QString name); 
     QSparqlResultRow parseStatement();
-    QVector<QSparqlResultRow> parse();
+    QList<QSparqlResultRow> parse();
 
     QByteArray buffer;
     int i;
     int lineNumber;
-    QVector<QSparqlResultRow> results;
+    QList<QSparqlResultRow> results;
 };
 
 QT_END_NAMESPACE
