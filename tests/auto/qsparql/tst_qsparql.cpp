@@ -60,6 +60,17 @@ class MockResult : public QSparqlResult
         return maxSize;
     }
 
+    bool isFinished() const
+    {
+        return finished;
+    }
+
+    bool last()
+    {
+        finished = true;
+        return QSparqlResult::last();
+    }
+
     QSparqlResultRow current() const
     {
         return QSparqlResultRow();
@@ -76,13 +87,14 @@ class MockResult : public QSparqlResult
     }
 public:
     static int maxSize;
+    bool finished;
 };
 
 class MockSyncFwOnlyResult : public QSparqlResult
 {
     Q_OBJECT
     public:
-    MockSyncFwOnlyResult() : currentSize(0)
+    MockSyncFwOnlyResult() : currentSize(0), finished(false)
     {
     }
 
@@ -91,11 +103,19 @@ class MockSyncFwOnlyResult : public QSparqlResult
         return currentSize;
     }
 
+    bool isFinished() const
+    {
+        return finished;
+    }
+
     // Only this is needed for iterating the result
     bool next()
     {
         if (currentSize < maxSize)
             currentSize++;
+
+        if (currentSize == maxSize)
+            finished = true;
 
         return QSparqlResult::next();
     }
@@ -123,6 +143,7 @@ class MockSyncFwOnlyResult : public QSparqlResult
 
     int currentSize;
     static int maxSize;
+    bool finished;
 };
 
 class MockDriver : public QSparqlDriver
@@ -174,7 +195,7 @@ int MockDriver::closeCount = 0;
 bool MockDriver::openRetVal = true;
 
 MockResult::MockResult(const MockDriver*)
-    : QSparqlResult()
+    : QSparqlResult(), finished(false)
 {
 }
 
@@ -314,7 +335,7 @@ void tst_QSparql::iterate_empty_result()
     QVERIFY(!res->hasError());
     QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     QVERIFY(!res->next());
-    QVERIFY(res->pos() == QSparql::AfterLastRow);
+    QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     QVERIFY(!res->previous());
     QVERIFY(res->pos() == QSparql::BeforeFirstRow);
     delete res;
@@ -332,9 +353,9 @@ void tst_QSparql::iterate_nonempty_result()
     QVERIFY(res->next());
     QCOMPARE(res->pos(), 1);
     QVERIFY(!res->next());
-    QVERIFY(res->pos() == QSparql::AfterLastRow);
+    QVERIFY(res->pos() == 1);
     QVERIFY(!res->next());
-    QVERIFY(res->pos() == QSparql::AfterLastRow);
+    QVERIFY(res->pos() == 1);
     res->first();
     QVERIFY(res->pos() == 0);
     res->last();
