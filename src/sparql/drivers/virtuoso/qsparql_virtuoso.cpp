@@ -53,6 +53,7 @@
 #include <QtCore/qvarlengtharray.h>
 #include <QtCore/qvector.h>
 #include <QtCore/qurl.h>
+#include <QtCore/qsemaphore.h>
 
 #include <QtCore/QAtomicInt>
 #include <QtCore/QMutex>
@@ -136,6 +137,8 @@ public:
     // is using the connection to make odbc queries
     QMutex connectionMutex;
     int dataReadyInterval;
+    int dataReadyBufferSize;
+    bool isForwardOnly;
 };
 
 class QVirtuosoResultPrivate
@@ -143,8 +146,10 @@ class QVirtuosoResultPrivate
 public:
     QVirtuosoResultPrivate(const QVirtuosoDriver* d, QVirtuosoDriverPrivate *dpp) :
         driver(d), hstmt(0), numResultCols(0), hdesc(0),
-        resultColIdx(0), driverPrivate(dpp), size(0)
+        resultColIdx(0), driverPrivate(dpp), size(0), resultsBase(0)
     {
+        if (driverPrivate->isForwardOnly)
+            availableResultEntries.release(driverPrivate->dataReadyBufferSize - 1);
     }
 
     ~QVirtuosoResultPrivate()
@@ -166,7 +171,14 @@ public:
     QVirtuosoDriverPrivate *driverPrivate;
     QAtomicInt isFinished;
     int size;
-    QVector<QSparqlResultRow> results;
+    QList<QSparqlResultRow> results;
+
+    // These two fields are only used by the isForwardOnly option
+    //  - resultsBase: count of the number of results deleted
+    //  - availableResultEntries: number of free entries in the results buffer,
+    //      and the fetcher thread will wait until it is at least 1
+    int resultsBase;
+    QSemaphore availableResultEntries;
 
     inline void clearValues()
     {
@@ -409,12 +421,23 @@ void QVirtuosoAsyncResult::terminate()
 {
     QMutexLocker resultLocker(&(da->resultMutex));
 
-    if (d->results.count() % d->driverPrivate->dataReadyInterval != 0) {
+    if (resultsCount() % d->driverPrivate->dataReadyInterval != 0) {
         emit dataReady(d->results.count());
     }
 
     d->isFinished = 1;
     emit finished();
+}
+
+int QVirtuosoResult::resultsCount() const
+{
+    return d->resultsBase + d->results.count();
+}
+
+int QVirtuosoResult::resultsPos() const
+{
+    Q_ASSERT_X(pos() >= 0, "QSparqResult::pos()", "index out of range");
+    return pos() - d->resultsBase;
 }
 
 static QSparqlBinding qMakeBinding(const QVirtuosoResultPrivate* p, int colNum)
@@ -531,16 +554,30 @@ bool QVirtuosoAsyncResult::fetchNextResult()
 
     }
 
+    if (d->driverPrivate->isForwardOnly) {
+        // qDebug() << "About to acquire free result, available:" << d->availableResultEntries.available();
+        d->availableResultEntries.acquire(1);
+    }
+
     QMutexLocker resultLocker(&(da->resultMutex));
+
+    if (d->driverPrivate->isForwardOnly) {
+        if (d->results.count() == d->driverPrivate->dataReadyBufferSize) {
+            d->results.removeFirst();
+            d->resultsBase++;
+        }
+    }
+
     d->clearValues();
 
     for (d->resultColIdx = 1; d->resultColIdx <= d->numResultCols; ++(d->resultColIdx)) {
         d->results[d->results.count() - 1].append(qMakeBinding(d, d->resultColIdx));
     }
 
-    if (d->results.count() % d->driverPrivate->dataReadyInterval == 0) {
+    if (resultsCount() % d->driverPrivate->dataReadyInterval == 0) {
         emit dataReady(d->results.count());
     }
+
     return true;
 }
 
@@ -573,12 +610,12 @@ QSparqlBinding QVirtuosoAsyncResult::binding(int field) const
         return QSparqlBinding();
     }
 
-    if (field >= d->results[pos()].count() || field < 0) {
+    if (field >= d->results[resultsPos()].count() || field < 0) {
         qWarning() << "QVirtuosoResult::data[" << pos() << "]: column" << field << "out of range";
         return QSparqlBinding();
     }
 
-    return d->results[pos()].binding(field);
+    return d->results[resultsPos()].binding(field);
 }
 
 QVariant QVirtuosoAsyncResult::value(int field) const
@@ -589,17 +626,17 @@ QVariant QVirtuosoAsyncResult::value(int field) const
         return QVariant();
     }
 
-    if (field >= d->results[pos()].count() || field < 0) {
+    if (field >= d->results[resultsPos()].count() || field < 0) {
         qWarning() << "QVirtuosoResult::data[" << pos() << "]: column" << field << "out of range";
         return QVariant();
     }
-    return d->results[pos()].value(field);
+    return d->results[resultsPos()].value(field);
 }
 
 int QVirtuosoAsyncResult::size() const
 {
     QMutexLocker resultLocker(&(da->resultMutex));
-    return d->results.count();
+    return resultsCount();
 }
 
 QSparqlResultRow QVirtuosoAsyncResult::current() const
@@ -610,10 +647,10 @@ QSparqlResultRow QVirtuosoAsyncResult::current() const
         return QSparqlResultRow();
     }
 
-    if (pos() < 0 || pos() >= d->results.count())
+    if (resultsPos() < 0 || pos() >= resultsCount())
         return QSparqlResultRow();
 
-    return d->results[pos()];
+    return d->results[resultsPos()];
 }
 
 bool QVirtuosoAsyncResult::hasFeature(QSparqlResult::Feature feature) const
@@ -904,6 +941,8 @@ bool QVirtuosoDriver::open(const QSparqlConnectionOptions& options)
     }
 
     d->dataReadyInterval = options.dataReadyInterval();
+    d->dataReadyBufferSize = d->dataReadyInterval * 2;
+    d->isForwardOnly = options.isForwardOnly();
 
     setOpen(true);
     setOpenError(false);
