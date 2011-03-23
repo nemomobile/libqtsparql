@@ -115,18 +115,15 @@ private slots:
     void async_conn_opening_for_update();
     void async_conn_opening_for_update_data();
 
-<<<<<<< HEAD
     void dataTypes();
     void explicitDataTypes();
     void largeInteger();
 
     void deleteLaterWithSelectResult();
     void deleteLaterWithUpdateResult();
-=======
 private:
     bool createTestData(int testDataAmount);
     void cleanupTestData();
->>>>>>> * Make the test program set up its own test data, and don't use shell
 };
 
 namespace {
@@ -253,8 +250,18 @@ void tst_QSparqlTrackerDirect::query_contacts_forward_only()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
-    // Calling waitForFinished() in forward only mode is an error
-    QCOMPARE(r->hasError(), true);
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
+    QHash<QString, QString> contactNames;
+    while (r->next()) {
+        QCOMPARE(r->current().count(), 2);
+        contactNames[r->value(0).toString()] = r->value(1).toString();
+    }
+    QCOMPARE(contactNames.size(), 3);
+    QCOMPARE(contactNames["uri001"], QString("name001"));
+    QCOMPARE(contactNames["uri002"], QString("name002"));
+    QCOMPARE(contactNames["uri003"], QString("name003"));
+    delete r;
 }
 
 void tst_QSparqlTrackerDirect::query_contacts_async()
@@ -266,7 +273,6 @@ void tst_QSparqlTrackerDirect::query_contacts_async()
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
-    return;
 
     QSignalSpy spy(r, SIGNAL(finished()));
     while (spy.count() == 0) {
@@ -366,9 +372,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
     QCOMPARE(r->hasError(), false);
 
     ForwardOnlyDataReadyListener listener(r);
-    QTest::qWait(20000);
-    qWarning() << "Returned from qWait(20000)";
-    QCOMPARE(r->isFinished(), true);
+    QTest::qWait(3000);
 }
 
 void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
