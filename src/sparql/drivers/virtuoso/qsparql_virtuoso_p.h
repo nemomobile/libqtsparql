@@ -107,6 +107,9 @@ public:
 
     bool hasFeature(QSparqlResult::Feature feature) const;
     virtual void terminate();
+
+    int resultsCount() const;
+    int resultsPos() const;
 protected:
     bool fetchBoolResult(SQLRETURN r);
     bool fetchGraphResult(SQLRETURN r);
