@@ -146,7 +146,7 @@ class QVirtuosoResultPrivate
 public:
     QVirtuosoResultPrivate(const QVirtuosoDriver* d, QVirtuosoDriverPrivate *dpp) :
         driver(d), hstmt(0), numResultCols(0), hdesc(0),
-        resultColIdx(0), driverPrivate(dpp), size(0)
+        resultColIdx(0), driverPrivate(dpp), size(0), resultsBase(0)
     {
         if (driverPrivate->isForwardOnly)
             availableResultEntries.release(driverPrivate->dataReadyBufferSize - 1);
@@ -171,7 +171,14 @@ public:
     QVirtuosoDriverPrivate *driverPrivate;
     QAtomicInt isFinished;
     int size;
-    QVector<QSparqlResultRow> results;
+    QList<QSparqlResultRow> results;
+
+    // These two fields are only used by the isForwardOnly option
+    //  - resultsBase: count of the number of results deleted
+    //  - availableResultEntries: number of free entries in the results buffer,
+    //      and the fetcher thread will wait until it is at least 1
+    int resultsBase;
+    QSemaphore availableResultEntries;
 
     inline void clearValues()
     {
@@ -394,6 +401,13 @@ void QVirtuosoAsyncResult::waitForFinished()
     if (d->isFinished == 1)
         return;
 
+    if (!d->driver->isOpen()) {
+        setLastError(QSparqlError(QLatin1String("Connection open failed"),
+                                  QSparqlError::ConnectionError));
+        terminate();
+        return;
+    }
+
     startFetcher();
     da->fetcher->wait();
 }
@@ -540,7 +554,20 @@ bool QVirtuosoAsyncResult::fetchNextResult()
 
     }
 
+    if (d->driverPrivate->isForwardOnly) {
+        // qDebug() << "About to acquire free result, available:" << d->availableResultEntries.available();
+        d->availableResultEntries.acquire(1);
+    }
+
     QMutexLocker resultLocker(&(da->resultMutex));
+
+    if (d->driverPrivate->isForwardOnly) {
+        if (d->results.count() == d->driverPrivate->dataReadyBufferSize) {
+            d->results.removeFirst();
+            d->resultsBase++;
+        }
+    }
+
     d->clearValues();
 
     for (d->resultColIdx = 1; d->resultColIdx <= d->numResultCols; ++(d->resultColIdx)) {
@@ -609,7 +636,7 @@ QVariant QVirtuosoAsyncResult::value(int field) const
 int QVirtuosoAsyncResult::size() const
 {
     QMutexLocker resultLocker(&(da->resultMutex));
-    return d->results.count();
+    return resultsCount();
 }
 
 QSparqlResultRow QVirtuosoAsyncResult::current() const
