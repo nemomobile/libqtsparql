@@ -655,7 +655,12 @@ QSparqlResultRow QVirtuosoAsyncResult::current() const
 
 bool QVirtuosoAsyncResult::hasFeature(QSparqlResult::Feature feature) const
 {
-    return false;
+    switch (feature) {
+    case QSparqlResult::ForwardOnly:
+        return d->driverPrivate->isForwardOnly;
+    default:
+        return false;
+    }
 }
 
 QVariant QVirtuosoResult::handle() const
