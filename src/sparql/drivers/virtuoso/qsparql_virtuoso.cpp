@@ -408,6 +408,13 @@ void QVirtuosoAsyncResult::waitForFinished()
         return;
     }
 
+    if (d->driverPrivate->isForwardOnly) {
+        setLastError(QSparqlError(QLatin1String("QSparqlResult::waitForFinished() cannot be used with 'forward only' connections"),
+                                          QSparqlError::ConnectionError));
+        terminate();
+        return;
+    }
+
     startFetcher();
     da->fetcher->wait();
 }
