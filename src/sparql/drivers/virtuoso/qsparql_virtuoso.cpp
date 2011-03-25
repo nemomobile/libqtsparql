@@ -606,7 +606,15 @@ bool QVirtuosoAsyncResult::fetchGraphResult()
 
 bool QVirtuosoAsyncResult::next()
 {
-    return QSparqlResult::next();
+    bool posAdvanced = QSparqlResult::next();
+
+    if (d->driverPrivate->isForwardOnly && posAdvanced) {
+        d->availableResultEntries.release(1);
+        // qDebug() << "Free results available:" << d->availableResultEntries.available();
+
+    }
+
+    return posAdvanced;
 }
 
 QSparqlBinding QVirtuosoAsyncResult::binding(int field) const
