@@ -66,6 +66,11 @@ public slots:
 
 private slots:
     void query_contacts();
+    void query_contacts_async();
+    void query_forward_only_wait_for_finished();
+    void query_async_forward_only();
+    void query_async_forward_only_large_result_set();
+    void query_async_forward_only_large_result_set_data();
     void construct_contacts();
     void ask_contact();
     void insert_and_delete_contact();
@@ -138,7 +143,6 @@ void tst_QSparqlVirtuoso::query_contacts()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
-    qWarning() << "lastError:" << r->lastError();
     QCOMPARE(r->hasError(), false);
     QCOMPARE(r->size(), 3);
     QHash<QString, QString> contactNames;
@@ -151,6 +155,185 @@ void tst_QSparqlVirtuoso::query_contacts()
     QCOMPARE(contactNames["uri002"], QString("name002"));
     QCOMPARE(contactNames["uri003"], QString("name003"));
     delete r;
+}
+
+void tst_QSparqlVirtuoso::query_forward_only_wait_for_finished()
+{
+    QSparqlConnectionOptions options;
+    options.setForwardOnly();
+    options.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    options.setPort(TEST_PORT);
+    QSparqlConnection conn("QVIRTUOSO", options);
+    conn.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+
+    QSparqlQuery q("select ?u ?ng from <http://virtuoso/testgraph> "
+                    "{?u a nco:PersonContact; "
+                    "nie:isLogicalPartOf <qsparql-virtuoso-tests> ;"
+                    "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+    r->waitForFinished(); // this test is synchronous only
+    // Calling waitForFinished() in forward only mode is an error
+    QCOMPARE(r->hasError(), true);
+}
+
+void tst_QSparqlVirtuoso::query_contacts_async()
+{
+    QSparqlConnectionOptions options;
+    options.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    options.setPort(TEST_PORT);
+    QSparqlConnection conn("QVIRTUOSO", options);
+    conn.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+
+    QSparqlQuery q("select ?u ?ng from <http://virtuoso/testgraph> "
+                   "{?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-virtuoso-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    QSignalSpy spy(r, SIGNAL(finished()));
+    while (spy.count() == 0) {
+        QTest::qWait(100);
+    }
+
+    QCOMPARE(spy.count(), 1);
+
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
+    QHash<QString, QString> contactNames;
+    while (r->next()) {
+        QCOMPARE(r->current().count(), 2);
+        contactNames[r->value(0).toString()] = r->value(1).toString();
+    }
+    QCOMPARE(contactNames.size(), 3);
+    QCOMPARE(contactNames["uri001"], QString("name001"));
+    QCOMPARE(contactNames["uri002"], QString("name002"));
+    QCOMPARE(contactNames["uri003"], QString("name003"));
+    delete r;
+}
+
+namespace {
+class ForwardOnlyDataReadyListener : public QObject
+{
+    Q_OBJECT
+public:
+    ForwardOnlyDataReadyListener(QSparqlResult* r, QStringList* l = 0) : result(r), received(0), list(l)
+    {
+        connect(r, SIGNAL(dataReady(int)),
+                SLOT(onDataReady(int)));
+    }
+public slots:
+    void onDataReady(int tc)
+    {
+        // qDebug() << "ForwardOnlyDataReadyListener::onDataReady() tc:" << tc << "result->pos():" << result->pos();
+        received = tc;
+        while (result->next()) {
+            if (list != 0)
+                list->append(result->stringValue(0));
+        }
+    }
+public:
+    QSparqlResult* result;
+    int received;
+    QStringList* list;
+};
+
+}
+
+void tst_QSparqlVirtuoso::query_async_forward_only()
+{
+    QSparqlConnectionOptions options;
+    options.setForwardOnly();
+    options.setDataReadyInterval(1);
+    options.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    options.setPort(TEST_PORT);
+    QSparqlConnection conn("QVIRTUOSO", options);
+    conn.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+
+    // A big query returning a lot of results
+    QSparqlQuery q("select ?n from <http://virtuoso/testgraph> "
+                   "{?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-virtuoso-bulk-tests> .}");
+
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+
+    ForwardOnlyDataReadyListener listener(r);
+    QTest::qWait(30000);
+    qDebug() << "result size:" << r->size();
+    QCOMPARE(r->isFinished(), true);
+}
+
+void tst_QSparqlVirtuoso::query_async_forward_only_large_result_set()
+{
+    QFETCH(int, dataReadyInterval1);
+    QFETCH(int, dataReadyInterval2);
+
+    QSparqlConnectionOptions opts1;
+    opts1.setForwardOnly();
+    opts1.setDataReadyInterval(dataReadyInterval1);
+    opts1.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    opts1.setPort(TEST_PORT);
+    QSparqlConnection conn1("QVIRTUOSO", opts1);
+    conn1.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn1.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+
+    // A big query returning a lot of results
+    QSparqlQuery q1("select ?n from <http://virtuoso/testgraph> "
+                    "{?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-virtuoso-bulk-tests> .}");
+
+    QSparqlResult* r1 = conn1.exec(q1);
+    QVERIFY(r1 != 0);
+    QCOMPARE(r1->hasError(), false);
+
+    QStringList results1;
+    ForwardOnlyDataReadyListener listener1(r1, &results1);
+    QTest::qWait(30000);
+    QCOMPARE(r1->isFinished(), true);
+
+    QSparqlConnectionOptions opts2;
+    opts2.setDataReadyInterval(dataReadyInterval2);
+    opts2.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
+    opts2.setPort(TEST_PORT);
+    QSparqlConnection conn2("QVIRTUOSO", opts2);
+    conn2.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
+    conn2.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
+
+    // A big query returning a lot of results
+    QSparqlQuery q2("select ?n from <http://virtuoso/testgraph> "
+                    "{?u a nco:PersonContact; nco:nameGiven ?n ;"
+                   "nie:isLogicalPartOf <qsparql-virtuoso-bulk-tests> .}");
+
+    QSparqlResult* r2 = conn2.exec(q2);
+    QVERIFY(r2 != 0);
+    QCOMPARE(r2->hasError(), false);
+
+    QStringList results2;
+    ForwardOnlyDataReadyListener listener2(r2, &results2);
+    QTest::qWait(30000);
+    QCOMPARE(r2->isFinished(), true);
+
+    QCOMPARE(results1, results2);
+}
+
+void tst_QSparqlVirtuoso::query_async_forward_only_large_result_set_data()
+{
+    QTest::addColumn<int>("dataReadyInterval1");
+    QTest::addColumn<int>("dataReadyInterval2");
+
+    QTest::newRow("DataReadyMinimum")
+        << 1 << 1;
+
+    QTest::newRow("DataReadyMaximum")
+        << 20 << 20;
 }
 
 void tst_QSparqlVirtuoso::construct_contacts()
@@ -437,7 +620,6 @@ bool tst_QSparqlVirtuoso::createTestData(int testDataAmount)
     conn.addPrefix("nco", QUrl("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#"));
     conn.addPrefix("nie", QUrl("http://www.semanticdesktop.org/ontologies/2007/01/19/nie#"));
     conn.addPrefix("foaf", QUrl("http://xmlns.com/foaf/0.1/"));
-    QTest::qWait(1000);
 
     const QString insertQuery =
         "INSERT INTO <http://virtuoso/testgraph> "
@@ -497,6 +679,31 @@ bool tst_QSparqlVirtuoso::createTestData(int testDataAmount)
     if (r1->hasError()) {
         qWarning() << "createTestData() failed:" << r1->lastError() << insertQuery;
         return false;
+    }
+
+    const QString insertQueryTemplate =
+        "<%1> a nco:PersonContact, nie:InformationElement ; "
+            "nie:isLogicalPartOf <qsparql-virtuoso-bulk-tests> ;"
+            "nco:nameGiven \"Given%2\" ; "
+            "nco:nameFamily \"Family%2\" . ";
+
+    const int insertBatchSize   = 200;
+
+    for (int item = 1; item <= testDataAmount; ) {
+        QString insertQuery = "INSERT INTO <http://virtuoso/testgraph> { ";
+        const int batchEnd = item + insertBatchSize;
+
+        for (; item < batchEnd && item <= testDataAmount; ++item) {
+            insertQuery.append(insertQueryTemplate.arg(conn.createUrn().toString()).arg(item));
+        }
+
+        insertQuery.append(" }");
+        // qDebug() << "query:" << insertQuery;
+        QSparqlResult* r2 = conn.syncExec(QSparqlQuery(insertQuery, QSparqlQuery::InsertStatement));
+        if (r2->hasError()) {
+            qWarning() << "createTestData() failed:" << r2->lastError() << insertQuery;
+            return false;
+        }
     }
 
     return true;
@@ -577,6 +784,34 @@ void tst_QSparqlVirtuoso::cleanupTestData()
     QSparqlResult* r4 = conn.syncExec(QSparqlQuery(deleteQuery4, QSparqlQuery::DeleteStatement));
     if (r4->hasError()) {
         qWarning() << "cleanupTestData() failed:" << r4->lastError() << deleteQuery4;
+        return;
+    }
+
+    const QString deleteQuery5 =
+        "DELETE from <http://virtuoso/testgraph> "
+        "{"
+            "?u a rdfs:Resource ."
+        "}"
+        "WHERE"
+        "{"
+            "?u nie:isLogicalPartOf <qsparql-virtuoso-bulk-tests> ."
+        "}";
+
+    QSparqlResult* r5 = conn.syncExec(QSparqlQuery(deleteQuery5, QSparqlQuery::DeleteStatement));
+    if (r5->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r5->lastError() << deleteQuery5;
+        return;
+    }
+
+    const QString deleteQuery6 =
+        "DELETE from <http://virtuoso/testgraph> "
+        "{"
+            "<qsparql-virtuoso-bulk-tests> a rdfs:Resource ."
+        "}";
+
+    QSparqlResult* r6 = conn.syncExec(QSparqlQuery(deleteQuery6, QSparqlQuery::DeleteStatement));
+    if (r6->hasError()) {
+        qWarning() << "cleanupTestData() failed:" << r6->lastError() << deleteQuery6;
         return;
     }
 
