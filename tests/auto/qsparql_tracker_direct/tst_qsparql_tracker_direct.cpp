@@ -64,10 +64,6 @@ public slots:
 private slots:
     void query_contacts();
     void qsparqlresultrow();
-    void query_contacts_forward_only();
-    void query_contacts_async();
-    void query_contacts_async_forward_only();
-    void query_async_forward_only();
     void query_forward_only_wait_for_finished();
     void query_contacts_async();
     void query_async_forward_only();
@@ -213,6 +209,15 @@ void tst_QSparqlTrackerDirect::query_contacts()
 void tst_QSparqlTrackerDirect::qsparqlresultrow()
 {
     QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+                   "nco:nameGiven ?ng .}");
+    QSparqlResult* r = conn.exec(q);
+    QVERIFY(r != 0);
+    QCOMPARE(r->hasError(), false);
+    r->waitForFinished(); // this test is synchronous only
+    QCOMPARE(r->hasError(), false);
+    QCOMPARE(r->size(), 3);
     QVERIFY(r->next());
     QSparqlResultRow row = r->current();
 
@@ -239,6 +244,8 @@ void tst_QSparqlTrackerDirect::qsparqlresultrow()
     QCOMPARE(row.contains("ng"), false);
     QCOMPARE(row.variableName(1), QString());
     QCOMPARE(row.indexOf("ng"), -1);
+
+    delete r;
 }
 
 void tst_QSparqlTrackerDirect::query_forward_only_wait_for_finished()
@@ -257,58 +264,9 @@ void tst_QSparqlTrackerDirect::query_forward_only_wait_for_finished()
     QCOMPARE(r->hasError(), true);
 }
 
-void tst_QSparqlTrackerDirect::query_contacts_forward_only()
-{
-    QCOMPARE(r->hasError(), false);
-    QCOMPARE(r->size(), 3);
-    QHash<QString, QString> contactNames;
-    while (r->next()) {
-        QCOMPARE(r->current().count(), 2);
-        contactNames[r->value(0).toString()] = r->value(1).toString();
-    }
-    QCOMPARE(contactNames.size(), 3);
-    QCOMPARE(contactNames["uri001"], QString("name001"));
-    QCOMPARE(contactNames["uri002"], QString("name002"));
-    QCOMPARE(contactNames["uri003"], QString("name003"));
-    delete r;
-}
-
 void tst_QSparqlTrackerDirect::query_contacts_async()
 {
     QSparqlConnection conn("QTRACKER_DIRECT");
-    QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
-                   "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
-                   "nco:nameGiven ?ng .}");
-    QSparqlResult* r = conn.exec(q);
-    QVERIFY(r != 0);
-    QCOMPARE(r->hasError(), false);
-
-    QSignalSpy spy(r, SIGNAL(finished()));
-    while (spy.count() == 0) {
-        QTest::qWait(100);
-    }
-
-    QCOMPARE(spy.count(), 1);
-
-    QCOMPARE(r->hasError(), false);
-    QCOMPARE(r->size(), 3);
-    QHash<QString, QString> contactNames;
-    while (r->next()) {
-        QCOMPARE(r->current().count(), 2);
-        contactNames[r->value(0).toString()] = r->value(1).toString();
-    }
-    QCOMPARE(contactNames.size(), 3);
-    QCOMPARE(contactNames["uri001"], QString("name001"));
-    QCOMPARE(contactNames["uri002"], QString("name002"));
-    QCOMPARE(contactNames["uri003"], QString("name003"));
-    delete r;
-}
-
-void tst_QSparqlTrackerDirect::query_contacts_async_forward_only()
-{
-    QSparqlConnectionOptions opts;
-    opts.setForwardOnly();
-    QSparqlConnection conn("QTRACKER_DIRECT", opts);
     QSparqlQuery q("select ?u ?ng {?u a nco:PersonContact; "
                    "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
                    "nco:nameGiven ?ng .}");
@@ -381,7 +339,8 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
     QCOMPARE(r->hasError(), false);
 
     ForwardOnlyDataReadyListener listener(r);
-    QTest::qWait(3000);
+    QTest::qWait(30000);
+    QCOMPARE(r->isFinished(), true);
 }
 
 void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set()
@@ -404,7 +363,6 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set()
 
     QStringList results1;
     ForwardOnlyDataReadyListener listener1(r1, &results1);
-    QTest::qWait(10000);
     QTest::qWait(30000);
     QCOMPARE(r1->isFinished(), true);
     
@@ -422,8 +380,9 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set()
 
     QStringList results2;
     ForwardOnlyDataReadyListener listener2(r2, &results2);
-    QTest::qWait(10000);
+    QTest::qWait(30000);
     QCOMPARE(r2->isFinished(), true);
+
     QCOMPARE(results1, results2);
 }
 

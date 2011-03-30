@@ -216,7 +216,7 @@ public:
 
     TrackerSparqlCursor* cursor;
     QVector<QString> columnNames;
-    QVector<QVariantList> results;
+    QList<QVariantList> results;
 
     // These two fields are only used by the isForwardOnly option
     //  - resultsBase: count of the number of results deleted
@@ -468,7 +468,6 @@ bool QTrackerDirectResult::fetchNextResult()
         }
     }
 
-    QVector<QPair<TrackerSparqlValueType, QByteArray> > resultRow;
     gint n_columns = tracker_sparql_cursor_get_n_columns(d->cursor);
 
     if (d->columnNames.empty()) {
@@ -570,25 +569,7 @@ QVariant QTrackerDirectResult::value(int field) const
         return QVariant();
     }
 
-    return qMakeVariant(    d->results[d->resultsPos()][field].first,
-                            d->results[d->resultsPos()][field].second,
-                            d->columnNames[field]);
-}
-
-QString QTrackerDirectResult::stringValue(int field) const
-{
-    QMutexLocker resultLocker(&(d->resultMutex));
-
-    if (!isValid()) {
-        return QString();
-    }
-
-    if (field >= d->results[d->resultsPos()].count() || field < 0) {
-        qWarning() << "QTrackerDirectResult::data[" << pos() << "]: column" << field << "out of range";
-        return QString();
-    }
-
-    return QString::fromUtf8(d->results[d->resultsPos()][field].second);
+    return d->results[d->resultsPos()].value(field);
 }
 
 void QTrackerDirectResult::waitForFinished()
@@ -669,6 +650,7 @@ QSparqlResultRow QTrackerDirectResult::current() const
         QSparqlBinding b(d->columnNames[i], d->results[d->resultsPos()][i]);
         resultRow.append(b);
     }
+
     return resultRow;
 }
 
