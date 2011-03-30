@@ -48,10 +48,18 @@
 SparqlQueryText::SparqlQueryText(QSparqlConnection& conn, QWidget *parent)
     : QTextEdit(parent), connection(conn)
 {
-    connection.addPrefix("foaf", QUrl::fromEncoded("http://xmlns.com/foaf/0.1/"));
-    setText(QLatin1String("SELECT ?Predicate ?Object \nWHERE { <http://dbpedia.org/resource/The_Beatles> ?Predicate ?Object . }"));
+    // connection.addPrefix("foaf", QUrl::fromEncoded("http://xmlns.com/foaf/0.1/"));
+    // setText(QLatin1String("SELECT ?Predicate ?Object \nWHERE { <http://dbpedia.org/resource/The_Beatles> ?Predicate ?Object . }"));
+    connection.addPrefix("sch-ont", QUrl::fromEncoded("http://education.data.gov.uk/def/school/"));
+    setText(QLatin1String("SELECT ?name WHERE { "
+                                               "?school a sch-ont:School; "
+                                               "sch-ont:establishmentName ?name; "
+                                               "sch-ont:districtAdministrative <http://statistics.data.gov.uk/id/local-authority-district/00AA> ; "
+                                               "} "
+                                               "ORDER BY ?name"));
     model = new QSparqlQueryModel();
 
+    connect(model, SIGNAL(finished()), this, SLOT(queryFinished()));
     tableView = new QTableView();
     tableView->setModel(model);
     tableView->resize(1000, 600);
@@ -63,6 +71,11 @@ void SparqlQueryText::runQuery()
     query = new QSparqlQuery(toPlainText());
     model->setQuery(*query, connection);
     tableView->show();
+}
+
+void SparqlQueryText::queryFinished()
+{
+    qDebug() << "Error message:" << model->lastError().message();
 }
 
 

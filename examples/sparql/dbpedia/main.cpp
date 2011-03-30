@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
     app.addLibraryPath("../../../../qsparql/plugins");
 
     QSparqlConnectionOptions options;
-    options.setHostName("dbpedia.org");
+    options.setHostName("services.data.gov.uk");
+    options.setPath("education/sparql");
     QSparqlConnection connection("QSPARQL_ENDPOINT", options);
 
     QWidget mainWidget;

@@ -66,6 +66,7 @@ private slots:
     void ask_current_member();
 
     void query_with_error();
+    void tst_hasError();
 };
 
 tst_QSparqlEndpoint::tst_QSparqlEndpoint()
@@ -205,6 +206,35 @@ void tst_QSparqlEndpoint::query_with_error()
     QCOMPARE(r->hasError(), true);
     QCOMPARE(r->lastError().type(), QSparqlError::StatementError);
     delete r;
+}
+
+void tst_QSparqlEndpoint::tst_hasError()
+{
+
+    QStringList list = QSparqlConnection::drivers();
+
+    QSparqlResult *r;
+    // Test for QSPARQL_ENDPOINT backend support
+    QSparqlConnectionOptions options;
+    options.setHostName("dbpedia.org");
+    options.setPort(8890);
+    QSparqlConnection conn("QSPARQL_ENDPOINT", options);
+    QCOMPARE(conn.isValid(), true);
+
+    // test for valid query
+    QSparqlQuery con("SELECT DISTINCT ?Object ?PlaceOfBirth "
+                     "WHERE { "
+                     "<http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object . "
+                     "?Object <http://dbpedia.org/ontology/birthPlace> ?PlaceOfBirth . }");
+    r = conn.exec(con);
+    QCOMPARE(r->hasError(), false);
+    QVERIFY(r->pos() == -1); //QSparql::BeforeFirstRow
+    QVERIFY(r->isFinished() == false);
+    r->waitForFinished();
+    // QTest::qWait(200);
+    QVERIFY(r->isFinished() == true);
+    QVERIFY(r->next());
+    QCOMPARE(r->hasError(), false);
 }
 
 QTEST_MAIN( tst_QSparqlEndpoint )

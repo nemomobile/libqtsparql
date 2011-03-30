@@ -68,8 +68,11 @@ private slots:
     void query_contacts_async();
     void query_contacts_async_forward_only();
     void query_async_forward_only();
-    void query_async_forward_only_results_correct();
-    void query_async_forward_only_results_correct_data();
+    void query_forward_only_wait_for_finished();
+    void query_contacts_async();
+    void query_async_forward_only();
+    void query_async_forward_only_large_result_set();
+    void query_async_forward_only_large_result_set_data();
     
     void ask_contacts();
     void insert_and_delete_contact();
@@ -238,7 +241,7 @@ void tst_QSparqlTrackerDirect::qsparqlresultrow()
     QCOMPARE(row.indexOf("ng"), -1);
 }
 
-void tst_QSparqlTrackerDirect::query_contacts_forward_only()
+void tst_QSparqlTrackerDirect::query_forward_only_wait_for_finished()
 {
     QSparqlConnectionOptions opts;
     opts.setForwardOnly();
@@ -250,6 +253,12 @@ void tst_QSparqlTrackerDirect::query_contacts_forward_only()
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
     r->waitForFinished(); // this test is synchronous only
+    // Calling waitForFinished() in forward only mode is an error
+    QCOMPARE(r->hasError(), true);
+}
+
+void tst_QSparqlTrackerDirect::query_contacts_forward_only()
+{
     QCOMPARE(r->hasError(), false);
     QCOMPARE(r->size(), 3);
     QHash<QString, QString> contactNames;
@@ -375,7 +384,7 @@ void tst_QSparqlTrackerDirect::query_async_forward_only()
     QTest::qWait(3000);
 }
 
-void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
+void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set()
 {
     QFETCH(int, dataReadyInterval1);
     QFETCH(int, dataReadyInterval2);
@@ -396,6 +405,8 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
     QStringList results1;
     ForwardOnlyDataReadyListener listener1(r1, &results1);
     QTest::qWait(10000);
+    QTest::qWait(30000);
+    QCOMPARE(r1->isFinished(), true);
     
     QSparqlConnectionOptions opts2;
     opts2.setDataReadyInterval(dataReadyInterval2);
@@ -412,11 +423,11 @@ void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct()
     QStringList results2;
     ForwardOnlyDataReadyListener listener2(r2, &results2);
     QTest::qWait(10000);
-    
+    QCOMPARE(r2->isFinished(), true);
     QCOMPARE(results1, results2);
 }
 
-void tst_QSparqlTrackerDirect::query_async_forward_only_results_correct_data()
+void tst_QSparqlTrackerDirect::query_async_forward_only_large_result_set_data()
 {
     QTest::addColumn<int>("dataReadyInterval1");
     QTest::addColumn<int>("dataReadyInterval2");

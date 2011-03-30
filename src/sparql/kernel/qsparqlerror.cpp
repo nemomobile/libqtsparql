@@ -96,6 +96,24 @@ QSparqlError::QSparqlError(const QString& message,
                            ErrorType type, int number)
     : errorMessage(message), errorType(type), errorNumber(number)
 {
+    if (errorMessage.isEmpty()) {
+        switch (errorType) {
+        case ConnectionError:
+            setMessage(QLatin1String("Connection error"));
+            break;
+        case StatementError:
+            setMessage(QLatin1String("Statement error"));
+            break;
+        case TransactionError:
+            setMessage(QLatin1String("Transaction error"));
+            break;
+        case BackendError:
+            setMessage(QLatin1String("Backend error"));
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 /*!

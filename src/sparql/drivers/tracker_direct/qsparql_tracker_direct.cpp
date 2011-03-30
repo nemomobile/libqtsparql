@@ -661,12 +661,12 @@ QSparqlResultRow QTrackerDirectResult::current() const
     if (d->resultsPos() < 0 || pos() >= d->resultsCount())
         return QSparqlResultRow();
 
-    if (d->columnNames.size() != d->results[pos()].size())
+    if (d->columnNames.size() != d->results[d->resultsPos()].size())
         return QSparqlResultRow();
 
     QSparqlResultRow resultRow;
-    for (int i = 0; i < d->results[pos()].size(); ++i) {
-        QSparqlBinding b(d->columnNames[i], d->results[pos()][i]);
+    for (int i = 0; i < d->results[d->resultsPos()].size(); ++i) {
+        QSparqlBinding b(d->columnNames[i], d->results[d->resultsPos()][i]);
         resultRow.append(b);
     }
     return resultRow;

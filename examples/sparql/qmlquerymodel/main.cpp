@@ -1,7 +1,8 @@
 #include <qdeclarative.h>
-#include <QDeclarativeView>
-#include <QDeclarativeEngine>
-#include <QApplication>
+#include <QtDeclarative/QDeclarativeView>
+#include <QtDeclarative/QDeclarativeEngine>
+#include <QtGui/QApplication>
+#include <QtCore/QDebug>
 
 int main(int argc, char *argv[])
 {
@@ -10,7 +11,11 @@ int main(int argc, char *argv[])
 
     QDeclarativeView view;
     view.engine()->addImportPath("../../../imports");
+    qWarning() << "about to load file";
     view.setSource(QUrl::fromLocalFile("albums.qml"));
+    qWarning() << "loaded file";
+    QList<QDeclarativeError> errors = view.errors();
+    qWarning() << "errors: " << errors;
     view.show();
     return app.exec();
 }

@@ -56,6 +56,7 @@ public:
     
 public Q_SLOTS:
     void runQuery();
+    void queryFinished();
     
 private:
     QSparqlConnection& connection;

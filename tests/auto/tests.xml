@@ -169,14 +169,7 @@
       </case>
       <case name="test-cancel-insert-result" description="Canclling an INSERT">
         <step expected_result="0">
-<<<<<<< HEAD
-	  su - user -c "/usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct cancel_insert_result ||
-	  ( i=$? &amp;&amp; tracker-sparql -u -f /usr/share/libqtsparql-tests/clean_data_tracker_direct.rq &amp;&amp;
-	  tracker-import /usr/share/libqtsparql-tests/testdata_tracker_direct.ttl &amp;&amp;
-	  exit $i )"
-=======
-	  /usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct cancel_insert_result
->>>>>>> * Improve the names of some of the methods for forward only tests
+	  su - user -c "/usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct cancel_insert_result"
         </step>
       </case>
       <case name="test-concurrent-queries" description="Concurrent queries">
@@ -191,14 +184,7 @@
       </case>
       <case name="test-insert-with-dbus-read-with-direct" description="Inserting and reading">
         <step expected_result="0">
-<<<<<<< HEAD
-	  su - user -c "/usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct insert_with_dbus_read_with_direct ||
-	  ( i=$? &amp;&amp; tracker-sparql -u -f /usr/share/libqtsparql-tests/clean_data_tracker_direct.rq &amp;&amp;
-	  tracker-import /usr/share/libqtsparql-tests/testdata_tracker_direct.ttl &amp;&amp;
-	  exit $i )"
-=======
-	  /usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct insert_with_dbus_read_with_direct
->>>>>>> * Improve the names of some of the methods for forward only tests
+      su - user -c "/usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct insert_with_dbus_read_with_direct"
         </step>
       </case>
       <case name="test-open-connection-twice" description="Open connection twice">
@@ -213,14 +199,7 @@
       </case>
       <case name="test-special-chars" description="Special characters">
         <step expected_result="0">
-<<<<<<< HEAD
-	  su - user -c "/usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct special_chars ||
-	  ( i=$? &amp;&amp; tracker-sparql -u -f /usr/share/libqtsparql-tests/clean_data_tracker_direct.rq &amp;&amp;
-	  tracker-import /usr/share/libqtsparql-tests/testdata_tracker_direct.ttl &amp;&amp;
-	  exit $i )"
-=======
-	  /usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct special_chars
->>>>>>> * Improve the names of some of the methods for forward only tests
+      su - user -c "/usr/lib/libqtsparql-tests/tst_qsparql_tracker_direct special_chars
         </step>
       </case>
       <case name="test-result-immediately-finished" description="Regression test">
