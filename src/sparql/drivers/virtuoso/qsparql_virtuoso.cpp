@@ -562,7 +562,7 @@ bool QVirtuosoAsyncResult::fetchNextResult()
     }
 
     if (d->driverPrivate->isForwardOnly) {
-        // qDebug() << "About to acquire free result, available:" << d->availableResultEntries.available();
+        qDebug() << Q_FUNC_INFO << "About to acquire free result, available:" << d->availableResultEntries.available();
         d->availableResultEntries.acquire(1);
     }
 
@@ -610,7 +610,7 @@ bool QVirtuosoAsyncResult::next()
 
     if (d->driverPrivate->isForwardOnly && posAdvanced) {
         d->availableResultEntries.release(1);
-        // qDebug() << "Free results available:" << d->availableResultEntries.available();
+        qDebug() << Q_FUNC_INFO << "Free results available:" << d->availableResultEntries.available();
 
     }
 
@@ -827,7 +827,7 @@ bool QVirtuosoResult::fetchGraphResult(SQLRETURN r)
     if (retval.name().toUpper() == QLatin1String("FMTAGGRET-NT")) {
         QByteArray buffer = retval.value().toString().toLatin1();
         QSparqlNTriples parser(buffer);
-        d->results = parser.parse();
+        d->results = parser.parse<QList<QSparqlResultRow> >();
     }
 
     terminate();

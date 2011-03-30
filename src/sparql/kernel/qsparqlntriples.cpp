@@ -318,24 +318,4 @@ QSparqlResultRow QSparqlNTriples::parseStatement()
     return resultRow;
 }
 
-QList<QSparqlResultRow> QSparqlNTriples::parse()
-{
-    skipWhiteSpace();
-    
-    while (i < buffer.size()) {
-        if (buffer[i] == '#') {
-            skipComment();
-        } else if (buffer[i] == '\n' || buffer[i] == '\r') {
-            ; // Blank line
-        } else {
-            results.append(parseStatement());
-        }
-        
-        skipEoln();
-        skipWhiteSpace();
-    }
-    
-    return results;
-}
-
 QT_END_NAMESPACE
