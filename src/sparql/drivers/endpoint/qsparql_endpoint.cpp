@@ -159,7 +159,7 @@ public:
     XmlInputSource *xml;
     XmlResultsParser *parser;
     QXmlSimpleReader *reader;
-    QList<QSparqlResultRow> results;
+    QVector<QSparqlResultRow> results;
     bool isFinished;
     QEventLoop *loop;
     EndpointResult *q;
@@ -333,7 +333,7 @@ void EndpointResultPrivate::parseResults()
 
     if (q->isGraph()) {
         QSparqlNTriples parser(buffer);
-        results = parser.parse();
+        results = parser.parse<QVector<QSparqlResultRow> >();
     }
 
     terminate();    

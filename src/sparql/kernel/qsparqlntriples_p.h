@@ -75,12 +75,32 @@ public:
     QString parseLanguageTag();
     QSparqlBinding parseLiteral(QString name); 
     QSparqlResultRow parseStatement();
-    QList<QSparqlResultRow> parse();
+
+    template <class Container>
+    inline Container parse()
+    {
+        Container results;
+        skipWhiteSpace();
+
+        while (i < buffer.size()) {
+            if (buffer[i] == '#') {
+                skipComment();
+            } else if (buffer[i] == '\n' || buffer[i] == '\r') {
+                ; // Blank line
+            } else {
+                results.append(parseStatement());
+            }
+
+            skipEoln();
+            skipWhiteSpace();
+        }
+
+        return results;
+    }
 
     QByteArray buffer;
     int i;
     int lineNumber;
-    QList<QSparqlResultRow> results;
 };
 
 QT_END_NAMESPACE
