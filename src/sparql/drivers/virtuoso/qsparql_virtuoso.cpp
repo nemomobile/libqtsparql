@@ -727,6 +727,7 @@ bool QVirtuosoResult::next()
     SQLRETURN r;
     r = SQLFetch(d->hstmt);
 
+#ifdef FORWARD_ONLY_BRANCH
     if (r == SQL_SUCCESS || r == SQL_SUCCESS_WITH_INFO) {
         d->size++;
     } else {
@@ -740,6 +741,26 @@ bool QVirtuosoResult::next()
     }
 
     return QSparqlResult::next();
+#else    
+    if (r == SQL_SUCCESS || r == SQL_SUCCESS_WITH_INFO) {
+        d->size++;
+    } else {
+        if (r != SQL_NO_DATA)
+            setLastError(qMakeError(QCoreApplication::translate("QVirtuosoResult",
+                "Unable to fetch next"), QSparqlError::BackendError, d));
+
+        updatePos(QSparql::AfterLastRow);
+        terminate();
+        return false;
+    }
+
+    int oldPos = pos();
+    if (oldPos == QSparql::BeforeFirstRow)
+        updatePos(0);
+    else
+        updatePos(oldPos + 1);
+    return true;
+#endif
 }
 
 int QVirtuosoResult::size() const
@@ -962,8 +983,11 @@ bool QVirtuosoDriver::open(const QSparqlConnectionOptions& options)
 
     d->dataReadyInterval = options.dataReadyInterval();
     d->dataReadyBufferSize = d->dataReadyInterval * 2;
+#ifdef FORWARD_ONLY_BRANCH
     d->isForwardOnly = options.isForwardOnly();
-
+#else
+    d->isForwardOnly = false;
+#endif
     setOpen(true);
     setOpenError(false);
     return true;
