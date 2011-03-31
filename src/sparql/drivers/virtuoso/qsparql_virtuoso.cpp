@@ -408,6 +408,13 @@ void QVirtuosoAsyncResult::waitForFinished()
         return;
     }
 
+    if (d->driverPrivate->isForwardOnly) {
+        setLastError(QSparqlError(QLatin1String("QSparqlResult::waitForFinished() cannot be used with 'forward only' connections"),
+                                          QSparqlError::ConnectionError));
+        terminate();
+        return;
+    }
+
     startFetcher();
     da->fetcher->wait();
 }
@@ -555,7 +562,7 @@ bool QVirtuosoAsyncResult::fetchNextResult()
     }
 
     if (d->driverPrivate->isForwardOnly) {
-        // qDebug() << "About to acquire free result, available:" << d->availableResultEntries.available();
+        qDebug() << Q_FUNC_INFO << "About to acquire free result, available:" << d->availableResultEntries.available();
         d->availableResultEntries.acquire(1);
     }
 
@@ -599,7 +606,15 @@ bool QVirtuosoAsyncResult::fetchGraphResult()
 
 bool QVirtuosoAsyncResult::next()
 {
-    return QSparqlResult::next();
+    bool posAdvanced = QSparqlResult::next();
+
+    if (d->driverPrivate->isForwardOnly && posAdvanced) {
+        d->availableResultEntries.release(1);
+        qDebug() << Q_FUNC_INFO << "Free results available:" << d->availableResultEntries.available();
+
+    }
+
+    return posAdvanced;
 }
 
 QSparqlBinding QVirtuosoAsyncResult::binding(int field) const
@@ -812,7 +827,7 @@ bool QVirtuosoResult::fetchGraphResult(SQLRETURN r)
     if (retval.name().toUpper() == QLatin1String("FMTAGGRET-NT")) {
         QByteArray buffer = retval.value().toString().toLatin1();
         QSparqlNTriples parser(buffer);
-        d->results = parser.parse();
+        d->results = parser.parse<QList<QSparqlResultRow> >();
     }
 
     terminate();
