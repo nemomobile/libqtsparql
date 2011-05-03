@@ -58,8 +58,8 @@ class TrackerDirectCommon : public QObject
         bool cleanData();
 
     private:
-        QSparqlResult* runQuery(QSparqlConnection &conn, const QSparqlQuery &q);
-        virtual QSparqlResult* execQuery(QSparqlConnection &conn, const QSparqlQuery &q) =0;
+        QSparqlResult* runQuery(QSparqlConnection &conn, const QSparqlQuery &q, const QSparqlQueryOptions& options=QSparqlQueryOptions());
+        virtual QSparqlResult* execQuery(QSparqlConnection &conn, const QSparqlQuery &q, const QSparqlQueryOptions& options=QSparqlQueryOptions()) =0;
         virtual void waitForQueryFinished(QSparqlResult* r) =0;
         virtual bool checkResultSize(QSparqlResult* r, int s) =0;
 
@@ -83,6 +83,7 @@ class TrackerDirectCommon : public QObject
         void datatype_boolean_data();
         void datatypes_as_properties_data();
         void datatypes_as_properties();
+        void low_priority_updates();
 };
 
 class TestData : public QObject {

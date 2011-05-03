@@ -1,5 +1,6 @@
 #include "tracker_direct_common.h"
 #include "testhelpers.h"
+#include "trackerchangedsignalreceiver.h"
 #include <QtTest/QtTest>
 #include <QtSparql/QtSparql>
 
@@ -47,9 +48,9 @@ TrackerDirectCommon::~TrackerDirectCommon()
 {
 }
 
-QSparqlResult* TrackerDirectCommon::runQuery(QSparqlConnection &conn, const QSparqlQuery &q)
+QSparqlResult* TrackerDirectCommon::runQuery(QSparqlConnection &conn, const QSparqlQuery &q, const QSparqlQueryOptions& options)
 {
-    QSparqlResult* r = execQuery(conn, q);
+    QSparqlResult* r = execQuery(conn, q, options);
     if (!r) {
         qWarning() << "execQuery() returned empty result";
         return 0;
@@ -756,6 +757,75 @@ void TrackerDirectCommon::datatypes_as_properties()
     }
 
     delete r;
+}
+
+void TrackerDirectCommon::low_priority_updates()
+{
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    const QString className("http://www.semanticdesktop.org/ontologies/2007/03/22/nco#PersonContact");
+
+    {
+        TrackerChangedSignalReceiver changedSignalReceiver;
+        QVERIFY( changedSignalReceiver.connect(className) );
+        changedSignalReceiver.drain(2000);
+    }
+
+    const QString insertQueryTemplate(
+            "insert { <addeduri%1> a nco:PersonContact; "
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests> ;"
+            "nie:isLogicalPartOf <qsparql-tracker-direct-tests-low_priority_updates> ;"
+            "nco:nameGiven \"addedname%1\" .} ");
+    const QSparqlQuery cleanupQuery(
+            "delete { ?pc a nco:PersonContact. }"
+            "where { ?pc nie:isLogicalPartOf <qsparql-tracker-direct-tests-low_priority_updates>. }",
+            QSparqlQuery::DeleteStatement);
+
+    const int batches = 5;
+    const int batchSize = 100;
+    QStringList insertQueries;
+    int insertedCount = 0;
+    for (int b = 0; b < batches; ++b) {
+        QString insertQuery;
+        for (int i = 0; i < batchSize; ++i) {
+            insertQuery.append(insertQueryTemplate.arg(++insertedCount));
+        }
+        insertQueries << insertQuery;
+    }
+
+    TrackerChangedSignalReceiver normalPrioritySignals;
+    TrackerChangedSignalReceiver lowPrioritySignals;
+    TrackerChangedSignalReceiver* signalReceiver = &normalPrioritySignals;
+    QSparqlQueryOptions options;
+
+    for (int round = 0; round < 2; ++round) {
+        QVERIFY( signalReceiver->connect(className) );
+        insertedCount = 0;
+        QList<QSparqlResult*> results;
+        for (int b = 0; b < batches; ++b) {
+            QSparqlResult* r = execQuery(conn, QSparqlQuery(insertQueries[b], QSparqlQuery::InsertStatement), options);
+            QVERIFY(r);
+            results << r;
+            insertedCount += batchSize;
+            QTest::qWait(2000/batches);  // Wait shortly to receive any signals tracker sends
+            qDebug() << "receivedSignals" << signalReceiver->receivedSignals;
+        }
+
+        QTest::qWait(4000);
+        QVERIFY( signalReceiver->disconnect(className) );
+        Q_FOREACH(QSparqlResult* r, results) {
+            QVERIFY(r->isFinished());
+        }
+        qDeleteAll(results);
+        results.clear();
+        QVERIFY( signalReceiver->receivedInserted.count() >= insertedCount );
+
+        options.setPriority(QSparqlQueryOptions::PriorityLow);
+        signalReceiver = &lowPrioritySignals;
+
+        QScopedPointer<QSparqlResult> r(runQuery(conn, cleanupQuery));
+    }
+
+    QVERIFY( normalPrioritySignals.receivedSignals > lowPrioritySignals.receivedSignals );
 }
 
 class TestDataImpl : public TestData {

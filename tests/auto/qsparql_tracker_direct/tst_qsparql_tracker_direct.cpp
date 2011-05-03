@@ -58,7 +58,7 @@ public:
     virtual ~tst_QSparqlTrackerDirect();
 
 private:
-    QSparqlResult* execQuery(QSparqlConnection &conn, const QSparqlQuery &q);
+    QSparqlResult* execQuery(QSparqlConnection &conn, const QSparqlQuery &q, const QSparqlQueryOptions& options);
     void waitForQueryFinished(QSparqlResult* r);
     bool checkResultSize(QSparqlResult* r, int s);
 
@@ -132,8 +132,10 @@ tst_QSparqlTrackerDirect::~tst_QSparqlTrackerDirect()
 {
 }
 
-QSparqlResult* tst_QSparqlTrackerDirect::execQuery(QSparqlConnection &conn, const QSparqlQuery &q){
-    QSparqlResult* r = conn.exec(q);
+QSparqlResult* tst_QSparqlTrackerDirect::execQuery
+        (QSparqlConnection &conn, const QSparqlQuery &q, const QSparqlQueryOptions& options)
+{
+    QSparqlResult* r = conn.exec(q, options);
     return r;
 }
 
