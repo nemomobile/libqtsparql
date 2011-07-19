@@ -423,7 +423,7 @@ bool EndpointResult::exec(const QString& query, QSparqlQuery::StatementType type
         queryUrl.addQueryItem(QLatin1String("maxrows"), maxrows.toString());
     }
 
-    qDebug() << "Real url to run.... " << queryUrl.toString();
+    //qDebug() << "Real url to run.... " << queryUrl.toString();
 
     d->buffer.clear();
     QNetworkRequest request(queryUrl);

@@ -92,6 +92,8 @@ public:
             return createTrackerDataBase();
         else if(backendName == "QVIRTUOSO")
             return createVirtuosoDataBase();
+
+        return false;
     }
 
     /* Sample database deletion. */
@@ -107,6 +109,8 @@ public:
             return deleteTrackerDataBase();
         else if (backendName == "QVIRTUOSO")
             return deleteVirtuosoDataBase();
+
+        return false;
     }
     /* Display the data to user in table form. */
     void showDataBase(QString backendName)
@@ -192,33 +196,18 @@ private slots:
     {
         // Delete the uri
         QSparqlConnection conn("QTRACKER");
-        QSparqlResult *r, *r1;
-
-        QSparqlQuery q("select ?u ?ng ?nf{?u a nco:PersonContact; "
-                       "nie:isLogicalPartOf <Tracker-DataBase> ;"
-                       "nco:nameGiven ?ng;"
-                       "nco:nameFamily ?nf.}");
-        r = conn.exec(q);
-        r->waitForFinished(); // this test is syncronous only
-
-        while(r->next())
-        {
-            QString query= "delete { <";
-            query= query.append(r->binding(0).value().toString());
-            query= query.append("> a rdfs:Resource. }");
-            QSparqlQuery del(query,QSparqlQuery::DeleteStatement);
-            r1 = conn.exec(del);
-            r1->waitForFinished(); // this test is syncronous only
-        }
-        delete r1;
-
-        if(!r->hasError()){
-            delete r;
-            return true;
-        }
-        else{
+        QSparqlQuery q("DELETE { ?u a rdfs:Resource . } "
+                         "  WHERE { ?u nie:isLogicalPartOf <Tracker-DataBase> . }"
+                         " DELETE { <Tracker-DataBase> a rdfs:Resource . }",
+                    QSparqlQuery::DeleteStatement);
+        QSparqlResult* r = conn.exec(q);
+        r->waitForFinished();
+        if (r->hasError()) {
             delete r;
             return false;
+        } else {
+            delete r;
+            return true;
         }
     }
 
@@ -277,33 +266,18 @@ private slots:
         QSparqlConnectionOptions options;
         options.setDatabaseName("DRIVER=/usr/lib/odbc/virtodbc_r.so");
         QSparqlConnection conn("QVIRTUOSO", options);
-        QSparqlResult *r, *r1;
-
-        QSparqlQuery q("select ?u ?ng ?nf{?u a nco:PersonContact; "
-                       "nie:isLogicalPartOf <Virtuoso-DataBase> ;"
-                       "nco:nameGiven ?ng;"
-                       "nco:nameFamily ?nf.}");
-        r = conn.exec(q);
-        r->waitForFinished(); // this test is syncronous only
-
-        while(r->next())
-        {
-            QString query= "delete { <";
-            query= query.append(r->binding(0).value().toString());
-            query= query.append("> a rdfs:Resource. }");
-            QSparqlQuery del(query,QSparqlQuery::DeleteStatement);
-            r1 = conn.exec(del);
-            r1->waitForFinished(); // this test is syncronous only
-        }
-        delete r1;
-
-        if(!r->hasError()){
-            delete r;
-            return true;
-        }
-        else{
+        QSparqlQuery q("DELETE { ?u a rdfs:Resource . } "
+                       "WHERE { ?u nie:isLogicalPartOf <Virtuoso-DataBase> . }"
+                       "DELETE { <Virtuoso-DataBase> a rdfs:Resource . }",
+                     QSparqlQuery::DeleteStatement);
+        QSparqlResult* r = conn.exec(q);
+        r->waitForFinished();
+        if (r->hasError()) {
             delete r;
             return false;
+        } else {
+            delete r;
+            return true;
         }
     }
 };

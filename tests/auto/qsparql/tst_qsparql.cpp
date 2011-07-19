@@ -705,7 +705,6 @@ void tst_QSparql::querymodel_test_HeaderData()
 {
     QSparqlQueryModel querymodel;
     tst_Querymodelder der;
-    QSparqlResult* result = NULL;
     SparqlApiTestsUtilities util;
     QSparqlResult *r;
     QModelIndex modelIndex;
@@ -720,6 +719,7 @@ void tst_QSparql::querymodel_test_HeaderData()
     r = conn.exec(query);
     r->waitForFinished(); // this test is syncronous only
     //querymodel.fetchMore(); // nec
+
     query.setType(QSparqlQuery::SelectStatement);
     querymodel.setQuery(query,conn);
 
@@ -740,6 +740,7 @@ void tst_QSparql::querymodel_test_HeaderData()
     // delete the data base
     bool deleteDb = util.deleteSampleDataBase(QString("QTRACKER"));
     QVERIFY(deleteDb);
+    delete r;
 }
 
 // tests the removeColumn to the current query.
@@ -974,6 +975,7 @@ void tst_QSparql::querymodel_test_clear()
     /* the model is not usable until the setQuery()  has been called. */
     QVERIFY(querymodel.columnCount(modelIndex) <= 0);
     util.deleteSampleDataBase("QTRACKER");
+    delete result;
 }
 
 void tst_QSparql::sparqlError_test_constuctor()
