@@ -63,6 +63,11 @@ private slots:
     void unbind_and_replace();
     void different_datatypes_data();
     void different_datatypes();
+    void copyConstructor();
+    void assignmentOperator();
+    void setQuery();
+    void setType();
+    void bindValues();
 };
 
 tst_QSparqlQuery::tst_QSparqlQuery()
@@ -75,6 +80,9 @@ tst_QSparqlQuery::~tst_QSparqlQuery()
 
 void tst_QSparqlQuery::initTestCase()
 {
+    // For running the test without installing the plugins. Should work in
+    // normal and vpath builds.
+    QCoreApplication::addLibraryPath("../../../plugins");
 }
 
 void tst_QSparqlQuery::cleanupTestCase()
@@ -244,6 +252,207 @@ void tst_QSparqlQuery::different_datatypes()
 
     QCOMPARE(q.query(), rawString);
     QCOMPARE(q.preparedQueryText(), replacedString);
+}
+
+void tst_QSparqlQuery::setQuery()
+{
+    QSparqlQuery q("This is sample query");
+    QCOMPARE(q.query().isEmpty(), false);
+    QCOMPARE(q.query(), QString("This is sample query"));
+
+    q.setQuery("This is changed query");
+    QCOMPARE(q.query().isEmpty(), false);
+    QCOMPARE(q.query(), QString("This is changed query"));
+}
+
+//QSparqlQuery SetType() API property test which sets the type for query
+void tst_QSparqlQuery::setType()
+{
+    QStringList list = QSparqlConnection::drivers();
+    for(int i=0;i<list.count();i++)
+    {
+        if (list.contains("QTRACKER")) {
+            //Creating the QTRACKER Database
+            QSparqlConnection conn("QTRACKER");
+            QVERIFY(conn.isValid());
+
+            // use InsertStatement to insert query into QTRACKER
+            QSparqlQuery query("insert { <abcdef> a nco:PersonContact; "
+                               "nie:isLogicalPartOf <QTRACKER-database> ;"
+                               "nco:nameGiven \"3435346\" .}");
+            QVERIFY(query.type() != QSparqlQuery::InsertStatement);
+            query.setType(QSparqlQuery::InsertStatement);
+            QSparqlResult *result = conn.exec(query);
+            QVERIFY(result != 0);
+            QVERIFY(result->hasError() == false);
+            result->waitForFinished();
+            QVERIFY(result->isFinished());
+            QVERIFY(result->hasError() ==  false);
+            QVERIFY(result->lastError().type() == QSparqlError::NoError);
+            QVERIFY(query.type() == QSparqlQuery::InsertStatement);
+
+            // use SelectStatement to select query from QTRACKER
+            query.setQuery("select ?u ?ng {?u a nco:PersonContact; "
+                           "nie:isLogicalPartOf <QTRACKER-database> ;"
+                           "nco:nameGiven ?ng .}");
+
+            QVERIFY(query.type() != QSparqlQuery::SelectStatement);
+            query.setType(QSparqlQuery::SelectStatement);
+            result = conn.exec(query);
+            QVERIFY(result != 0);
+            QVERIFY(result->hasError() == false);
+            result->waitForFinished();
+            QVERIFY(result->isFinished());
+            QVERIFY(result->hasError() ==  false);
+            QVERIFY(result->lastError().type() == QSparqlError::NoError);
+            QVERIFY(query.type() == QSparqlQuery::SelectStatement);
+
+            // use DeleteStatement to delete query from QTRACKER
+            query.setQuery("delete{<abcdef> a rdfs:Resource. }");
+            QVERIFY(query.type() != QSparqlQuery::DeleteStatement);
+            query.setType(QSparqlQuery::DeleteStatement);
+            result = conn.exec(query);
+            QVERIFY(result != 0);
+            QVERIFY(result->hasError() == false);
+            result->waitForFinished();
+            QVERIFY(result->isFinished());
+            QVERIFY(result->hasError() ==  false);
+            QVERIFY(result->lastError().type() == QSparqlError::NoError);
+            QVERIFY(query.type() == QSparqlQuery::DeleteStatement);
+        }
+        if (list.contains("QSPARQL_ENDPOINT")) {
+            //Creating the EndPoint Database
+            QSparqlConnectionOptions options;
+            options.setHostName("dbpedia.org");
+            QSparqlConnection conn1("QSPARQL_ENDPOINT", options);
+            QCOMPARE(conn1.isValid(), true);
+            QSparqlResult *result;
+            // Use ConstructStatement to construct the query from ENDPOINT
+            QSparqlQuery query1("CONSTRUCT { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object } "
+                                "WHERE { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object . }");
+            QVERIFY(query1.type() != QSparqlQuery::ConstructStatement);
+            query1.setType(QSparqlQuery::ConstructStatement);
+            result = conn1.exec(query1);
+            QVERIFY(result != 0);
+            QVERIFY(result->hasError() == false);
+            result->waitForFinished();
+            QVERIFY(result->isFinished());
+            QVERIFY(result->hasError() ==  false);
+            QVERIFY(result->lastError().type() == QSparqlError::NoError);
+            QVERIFY(query1.type() == QSparqlQuery::ConstructStatement);
+
+            // Use DescribeStatement to Describe the query from ENDPOINT
+            query1.setQuery("DESCRIBE ?Object "
+                            "WHERE { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object . }");
+            QVERIFY(query1.type() != QSparqlQuery::DescribeStatement);
+            query1.setType(QSparqlQuery::DescribeStatement);
+            result = conn1.exec(query1);
+            QVERIFY(result != 0);
+            QVERIFY(result->hasError() == false);
+            result->waitForFinished();
+            QVERIFY(result->isFinished());
+            QVERIFY(result->hasError() ==  false);
+            QVERIFY(result->lastError().type() == QSparqlError::NoError);
+            QVERIFY(query1.type() == QSparqlQuery::DescribeStatement);
+
+            // Use AskStatement to ask the query from ENDPOINT
+            query1.setQuery("ASK { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> <http://dbpedia.org/resource/Ringo_Starr> . }");
+            QVERIFY(query1.type() != QSparqlQuery::AskStatement);
+            query1.setType(QSparqlQuery::AskStatement);
+            result = conn1.exec(query1);
+            QVERIFY(result != 0);
+            QVERIFY(result->hasError() == false);
+            result->waitForFinished();
+            QVERIFY(result->isFinished());
+            QVERIFY(result->hasError() ==  false);
+            QVERIFY(result->lastError().type() == QSparqlError::NoError);
+            QVERIFY(query1.type() == QSparqlQuery::AskStatement);
+            delete result;
+        }
+    }
+}
+
+//QSparqlQuery Opearator=() API property test which assign one QSparqlQuery Object to other by using Operator =
+void tst_QSparqlQuery::assignmentOperator()
+{
+    QSparqlConnection conn("QTRACKER");
+    QVERIFY(conn.isValid());
+
+    // check whether a valid query is inserted
+    QSparqlQuery query("insert { <sdsad> a nco:PersonContact; "
+                       "nie:isLogicalPartOf <QTRACKER-database> ;"
+                       "nco:nameGiven \"343534\" .}",
+                       QSparqlQuery::InsertStatement);
+    QSparqlQuery Copyquery = QSparqlQuery(query.query(),query.type());
+
+    QSparqlResult *result = conn.exec(Copyquery);
+    QVERIFY(result != 0);
+    QVERIFY(result->hasError() == false);
+    result->waitForFinished();
+    QVERIFY(result->isFinished());
+    QVERIFY(result->hasError() ==  false);
+    QVERIFY(result->lastError().type() == QSparqlError::NoError);
+    //Comparing both the queries
+    QCOMPARE(Copyquery .query() ,query.query());
+    QCOMPARE(Copyquery.type(), query.type());
+    delete result;
+}
+
+// bindValues() API property test which Iterates through the variable name - value
+// pairs from the bindings  and adds them as bindings.
+void tst_QSparqlQuery::bindValues()
+{
+    //construct an instance of QSparqlBinding class by passing name and value as an argument
+    QSparqlBinding bind0("name0", "value0");
+    QSparqlBinding bind1("name1");
+    QSparqlBinding bind2;
+    bind2.setName("name2");
+    QSparqlBinding bind3;
+    bind3.setValue("value3");
+
+    //Create an instance of QSparqlResultRow class and append the created binding.
+    QSparqlResultRow row;
+    row.append(bind0);
+    row.append(bind1);
+    row.append(bind2);
+
+    //Create an instance of QSparqlQuery class and Iterate through the variable name-value
+    //pairs from the bindings and add them as bindings. 
+    QSparqlQuery q;
+    q.bindValues(row);
+
+    //Return a map of the bound values using QSparqlQuery::boundValues and
+    //verify it contains the binded name value.
+    QMap<QString,QSparqlBinding> map = q.boundValues();
+    QVERIFY(map.contains("name0"));
+    QVERIFY(map.contains("name1"));
+    QVERIFY(map.contains("name2"));
+    QVERIFY(!map.contains("")); //should fail as key should not blank
+}
+
+//QSparqlQuery CopyConstructor() API property which ables to create copy constructor for QSparqlQuery
+void tst_QSparqlQuery::copyConstructor()
+{
+    QSparqlConnection conn("QTRACKER");
+    QVERIFY(conn.isValid());
+    // check whether a valid query is inserted
+    QSparqlQuery query("insert { <John> a nco:PersonContact; "
+                       "nie:isLogicalPartOf <QTRACKER-database> ;"
+                       "nco:nameGiven \"984649999\" .}",
+                       QSparqlQuery::InsertStatement);
+    QSparqlQuery copyquery(QSparqlQuery(query.query(),query.type()));
+
+    QSparqlResult *result = conn.exec(copyquery);
+    QVERIFY(result != 0);
+    QVERIFY(result->hasError() == false);
+    result->waitForFinished();
+    QVERIFY(result->isFinished());
+    QVERIFY(result->hasError() ==  false);
+    QVERIFY(result->lastError().type() == QSparqlError::NoError);
+    //Comparing both the queries
+    QCOMPARE(copyquery.query(), query.query());
+    QCOMPARE(copyquery.type(), query.type());
+    delete result;
 }
 
 QTEST_MAIN( tst_QSparqlQuery )
