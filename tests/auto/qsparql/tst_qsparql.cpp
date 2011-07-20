@@ -705,6 +705,10 @@ void tst_QSparql::querymodel_test_HeaderData()
 {
     QSparqlQueryModel querymodel;
     tst_Querymodelder der;
+
+    QSignalSpy modelSpy(&querymodel, SIGNAL(finished()));
+    QSignalSpy derSpy(&der, SIGNAL(finished()));
+
     SparqlApiTestsUtilities util;
     QSparqlResult *r;
     QModelIndex modelIndex;
@@ -741,6 +745,14 @@ void tst_QSparql::querymodel_test_HeaderData()
     bool deleteDb = util.deleteSampleDataBase(QString("QTRACKER"));
     QVERIFY(deleteDb);
     delete r;
+
+    // wait for query models to finish their results before they
+    // get deleted, avoids warnings
+    QTime timer;
+    timer.start();
+    while ( (modelSpy.count() == 0 || derSpy.count() == 0) && timer.elapsed() < 3000) {
+        QTest::qWait(100);
+    }
 }
 
 // tests the removeColumn to the current query.
