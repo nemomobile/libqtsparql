@@ -58,7 +58,7 @@ QTrackerDirectSyncResult::QTrackerDirectSyncResult(QTrackerDirectDriverPrivate* 
                                                    const QString& query,
                                                    QSparqlQuery::StatementType type,
                                                    const QSparqlQueryOptions& options)
-    : cursor(0), n_columns(-1), options(&options)
+    : QTrackerDirectResult(options), cursor(0), n_columns(-1)
 {
     setQuery(query);
     setStatementType(type);
@@ -108,9 +108,10 @@ void QTrackerDirectSyncResult::updateQuery()
     }
 
     GError * error = 0;
+
     tracker_sparql_connection_update(driverPrivate->connection,
                                      query().toUtf8().constData(),
-                                     qSparqlPriorityToGlib(options->priority()),
+                                     qSparqlPriorityToGlib(options.priority()),
                                      0,
                                      &error);
     if (error) {
