@@ -107,6 +107,9 @@ void ResultChecker::onFinished(QObject* mappedResult)
         resultSize = 0;
         while (result->next()) {
             resultSize++;
+            // Also verify the results here
+            QVERIFY(result->value(1).toInt() >= resultRange.first);
+            QVERIFY(result->value(1).toInt() <= resultRange.second);
         }
     }
     QCOMPARE(resultSize, expectedResultSize);
