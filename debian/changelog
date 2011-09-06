@@ -1,3 +1,9 @@
+libqtsparql (0.1.3~unreleased) unstable; urgency=low
+
+  *
+
+ -- James Thomas <james.thomas@codethink.co.uk>  Tue, 6 Sep 2011 12:21:00 +0300
+
 libqtsparql (0.1.2) unstable; urgency=low
 
   * Fixes: NB#280978 - QSparqlResult may run even after connection is deleted, resulting in a crash.
