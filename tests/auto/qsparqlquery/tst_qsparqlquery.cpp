@@ -63,11 +63,6 @@ private slots:
     void unbind_and_replace();
     void different_datatypes_data();
     void different_datatypes();
-    void copyConstructor();
-    void assignmentOperator();
-    void setQuery();
-    void setType();
-    void bindValues();
 };
 
 tst_QSparqlQuery::tst_QSparqlQuery()
@@ -249,120 +244,6 @@ void tst_QSparqlQuery::different_datatypes()
 
     QCOMPARE(q.query(), rawString);
     QCOMPARE(q.preparedQueryText(), replacedString);
-}
-
-void tst_QSparqlQuery::setQuery()
-{
-    QSparqlQuery q("This is sample query");
-    QCOMPARE(q.query().isEmpty(), false);
-    QCOMPARE(q.query(), QString("This is sample query"));
-
-    q.setQuery("This is changed query");
-    QCOMPARE(q.query().isEmpty(), false);
-    QCOMPARE(q.query(), QString("This is changed query"));
-}
-
-//QSparqlQuery SetType() API property test which sets the type for query
-void tst_QSparqlQuery::setType()
-{
-    QSparqlQuery query("insert { <abcdef> a nco:PersonContact; "
-                       "nie:isLogicalPartOf <QTRACKER-database> ;"
-                       "nco:nameGiven \"3435346\" .}");
-    QVERIFY(query.type() != QSparqlQuery::InsertStatement);
-    query.setType(QSparqlQuery::InsertStatement);
-    QVERIFY(query.type() == QSparqlQuery::InsertStatement);
-
-    // SelectStatement
-    query.setQuery("select ?u ?ng {?u a nco:PersonContact; "
-                   "nie:isLogicalPartOf <QTRACKER-database> ;"
-                   "nco:nameGiven ?ng .}");
-
-    QVERIFY(query.type() != QSparqlQuery::SelectStatement);
-    query.setType(QSparqlQuery::SelectStatement);
-    QVERIFY(query.type() == QSparqlQuery::SelectStatement);
-
-    query.setQuery("delete{<abcdef> a rdfs:Resource. }");
-    QVERIFY(query.type() != QSparqlQuery::DeleteStatement);
-    query.setType(QSparqlQuery::DeleteStatement);
-    QVERIFY(query.type() == QSparqlQuery::DeleteStatement);
-
-    QSparqlQuery query1("CONSTRUCT { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object } "
-                        "WHERE { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object . }");
-    QVERIFY(query1.type() != QSparqlQuery::ConstructStatement);
-    query1.setType(QSparqlQuery::ConstructStatement);
-    QVERIFY(query1.type() == QSparqlQuery::ConstructStatement);
-
-    // DescribeStatement
-    query1.setQuery("DESCRIBE ?Object "
-                    "WHERE { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> ?Object . }");
-    QVERIFY(query1.type() != QSparqlQuery::DescribeStatement);
-    query1.setType(QSparqlQuery::DescribeStatement);
-    QVERIFY(query1.type() == QSparqlQuery::DescribeStatement);
-
-    // AskStatement
-    query1.setQuery("ASK { <http://dbpedia.org/resource/The_Beatles> <http://dbpedia.org/property/currentMembers> <http://dbpedia.org/resource/Ringo_Starr> . }");
-    QVERIFY(query1.type() != QSparqlQuery::AskStatement);
-    query1.setType(QSparqlQuery::AskStatement);
-    QVERIFY(query1.type() == QSparqlQuery::AskStatement);
-}
-
-//QSparqlQuery Opearator=() API property test which assign one QSparqlQuery Object to other by using Operator =
-void tst_QSparqlQuery::assignmentOperator()
-{
-    QSparqlQuery query("insert { <sdsad> a nco:PersonContact; "
-                       "nie:isLogicalPartOf <QTRACKER-database> ;"
-                       "nco:nameGiven \"343534\" .}",
-                       QSparqlQuery::InsertStatement);
-    QSparqlQuery Copyquery = QSparqlQuery(query.query(), query.type());
-    //Comparing both the queries
-    QCOMPARE(Copyquery.query(), query.query());
-    QCOMPARE(Copyquery.type(), query.type());
-
-}
-
-// bindValues() API property test which Iterates through the variable name - value
-// pairs from the bindings  and adds them as bindings.
-void tst_QSparqlQuery::bindValues()
-{
-    //construct an instance of QSparqlBinding class by passing name and value as an argument
-    QSparqlBinding bind0("name0", "value0");
-    QSparqlBinding bind1("name1");
-    QSparqlBinding bind2;
-    bind2.setName("name2");
-    QSparqlBinding bind3;
-    bind3.setValue("value3");
-
-    //Create an instance of QSparqlResultRow class and append the created binding.
-    QSparqlResultRow row;
-    row.append(bind0);
-    row.append(bind1);
-    row.append(bind2);
-
-    //Create an instance of QSparqlQuery class and Iterate through the variable name-value
-    //pairs from the bindings and add them as bindings. 
-    QSparqlQuery q;
-    q.bindValues(row);
-
-    //Return a map of the bound values using QSparqlQuery::boundValues and
-    //verify it contains the binded name value.
-    QMap<QString,QSparqlBinding> map = q.boundValues();
-    QVERIFY(map.contains("name0"));
-    QVERIFY(map.contains("name1"));
-    QVERIFY(map.contains("name2"));
-    QVERIFY(!map.contains("")); //should fail as key should not blank
-}
-
-//QSparqlQuery CopyConstructor() API property which ables to create copy constructor for QSparqlQuery
-void tst_QSparqlQuery::copyConstructor()
-{
-    QSparqlQuery query("insert { <John> a nco:PersonContact; "
-                       "nie:isLogicalPartOf <QTRACKER-database> ;"
-                       "nco:nameGiven \"984649999\" .}",
-                       QSparqlQuery::InsertStatement);
-    QSparqlQuery copyquery(QSparqlQuery(query.query(),query.type()));
-    //Comparing both the queries
-    QCOMPARE(copyquery.query(), query.query());
-    QCOMPARE(copyquery.type(), query.type());
 }
 
 QTEST_MAIN( tst_QSparqlQuery )

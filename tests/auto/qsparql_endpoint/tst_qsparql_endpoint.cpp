@@ -137,11 +137,9 @@ void tst_QSparqlEndpoint::construct_current_members()
     QSparqlResult* r = conn.exec(q);
     QVERIFY(r != 0);
     QCOMPARE(r->hasError(), false);
-  //  r->waitForFinished(); // this test is synchronous only
-    QCOMPARE(r->isTable(), false);   //must be false
+    r->waitForFinished(); // this test is synchronous only
     QCOMPARE(r->hasError(), false);
     QCOMPARE(r->isGraph(), true);
-    QCOMPARE(r->isTable(), true);   //must be true
     QCOMPARE(r->size(), 4);
     QStringList currentMembers;
     currentMembers << QLatin1String("<http://dbpedia.org/resource/George_Harrison>");

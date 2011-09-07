@@ -299,8 +299,6 @@ void tst_QSparqlBinding::toString()
     QFETCH(QUrl, get_datatype);
 
     QSparqlBinding b1("testBinding1", value);
-    QVERIFY(b1.isValid());
-
     if (!lang.isNull())
         b1.setLanguageTag(lang.toString());
     if (!datatype.isNull())
