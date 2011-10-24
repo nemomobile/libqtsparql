@@ -94,6 +94,7 @@ QSparqlDriver::QSparqlDriver(QObject *parent)
     : QObject(parent)
 {
     d = new QSparqlDriverPrivate();
+    qDebug() << "c'tor QSparqlDriver";
 }
 
 /*!
@@ -103,6 +104,7 @@ QSparqlDriver::QSparqlDriver(QObject *parent)
 QSparqlDriver::~QSparqlDriver()
 {
     delete d;
+    qDebug() << "d'tor QSparqlDriver";
 }
 
 /*!

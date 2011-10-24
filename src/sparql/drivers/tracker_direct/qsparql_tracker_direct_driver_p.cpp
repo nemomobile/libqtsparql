@@ -312,12 +312,14 @@ QTrackerDirectDriver::QTrackerDirectDriver(QObject* parent)
     d = new QTrackerDirectDriverPrivate(this);
     /* Initialize GLib type system */
     g_type_init();
+    qDebug() << "c'tor QTrackerDirectDriver";
 
 }
 
 QTrackerDirectDriver::~QTrackerDirectDriver()
 {
     delete d;
+    qDebug() << "d'tor QTrackerDirectDriver";
 }
 
 bool QTrackerDirectDriver::hasFeature(QSparqlConnection::Feature f) const

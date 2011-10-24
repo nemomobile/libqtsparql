@@ -8,14 +8,6 @@
 }
 
 {
-   g_type_init
-   Memcheck:Leak
-   ...
-   fun:g_type_init_with_debug_flags
-   fun:g_type_init
-}
-
-{
    g_type_add_interface_static
    Memcheck:Leak
    fun:malloc
