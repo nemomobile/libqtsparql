@@ -100,9 +100,12 @@ public:
         drvName(name),
         options(opts)
     {
+        refCount.ref();
+        qDebug() << "ref++";
     }
     ~QSparqlConnectionPrivate();
 
+    static QAtomicInt refCount;
     static DriverDict &driverDict();
     static QSparqlDriver* findDriver(const QString& type);
     static QSparqlDriver* findDriverWithFactoryLoader(const QString& type);
@@ -137,6 +140,16 @@ QSparqlConnectionPrivate::~QSparqlConnectionPrivate()
         delete driver;
         driver = shared_null()->driver;
     }
+
+    qDebug() << "ref--";
+    if (!refCount.deref()) {
+        QMutexLocker locker(&pluginMutex);
+        allKeys.clear();
+        qDeleteAll(plugins);
+        plugins.clear();
+        qDebug() << "freed";
+    }
+
 }
 
 static bool qDriverDictInit = false;
@@ -231,6 +244,7 @@ QSparqlDriver* QSparqlConnectionPrivate::findDriverWithFactoryLoader(const QStri
 #endif // WE_ARE_QT
 }
 
+QAtomicInt QSparqlConnectionPrivate::refCount;
 QStringList QSparqlConnectionPrivate::allKeys;
 QHash<QString, QSparqlDriverPlugin*> QSparqlConnectionPrivate::plugins;
 QMutex QSparqlConnectionPrivate::pluginMutex(QMutex::Recursive);
