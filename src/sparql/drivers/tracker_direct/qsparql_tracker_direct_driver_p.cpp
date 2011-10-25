@@ -251,11 +251,13 @@ QTrackerDirectDriverPrivate::QTrackerDirectDriverPrivate(QTrackerDirectDriver *d
     : connection(0), dataReadyInterval(1), connectionMutex(QMutex::Recursive), driver(driver),
       asyncOpenCalled(false), connectionOpener(new QTrackerDirectDriverConnectionOpen)
 {
+    qDebug() << "QTrackerDirectDriverPrivate c'tor";
     QObject::connect(connectionOpener, SIGNAL(connectionOpened()), this, SLOT(asyncOpenComplete()));
 }
 
 QTrackerDirectDriverPrivate::~QTrackerDirectDriverPrivate()
 {
+    qDebug() << "QTrackerDirectDriverPrivate d'tor";
     delete connectionOpener;
 }
 
@@ -309,6 +311,7 @@ void QTrackerDirectDriverPrivate::openConnection()
 QTrackerDirectDriver::QTrackerDirectDriver(QObject* parent)
     : QSparqlDriver(parent)
 {
+    qDebug() << "QTrackerDirectDriver c'tor";
     d = new QTrackerDirectDriverPrivate(this);
     /* Initialize GLib type system */
     g_type_init();

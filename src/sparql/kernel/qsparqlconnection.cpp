@@ -101,11 +101,11 @@ public:
         options(opts)
     {
         refCount.ref();
-        qDebug() << "ref++";
     }
     ~QSparqlConnectionPrivate();
 
     static QAtomicInt refCount;
+    static QList<QPluginLoader*> &pluginLoaders();
     static DriverDict &driverDict();
     static QSparqlDriver* findDriver(const QString& type);
     static QSparqlDriver* findDriverWithFactoryLoader(const QString& type);
@@ -141,15 +141,34 @@ QSparqlConnectionPrivate::~QSparqlConnectionPrivate()
         driver = shared_null()->driver;
     }
 
-    qDebug() << "ref--";
     if (!refCount.deref()) {
         QMutexLocker locker(&pluginMutex);
         allKeys.clear();
         qDeleteAll(plugins);
         plugins.clear();
-        qDebug() << "freed";
     }
 
+}
+
+static void cleanPluginLoaders()
+{
+    qDebug() << "executed cleanPluginLoaders added previously by qAddPostRoutine";
+    for (int i = 0; i < QSparqlConnectionPrivate::pluginLoaders().size(); i++) {
+         QSparqlConnectionPrivate::pluginLoaders().at(i)->unload();
+         delete QSparqlConnectionPrivate::pluginLoaders().at(i);
+    }
+    qDeleteAll(QSparqlConnectionPrivate::pluginLoaders());
+    QSparqlConnectionPrivate::pluginLoaders().clear();
+}
+static bool qPluginLoadersInit = false;
+QList<QPluginLoader*> &QSparqlConnectionPrivate::pluginLoaders()
+{
+    static QList<QPluginLoader*> pluginLoaders;
+    if (!qPluginLoadersInit) {
+        qPluginLoadersInit = true;
+        qAddPostRoutine(cleanPluginLoaders);
+    }
+    return pluginLoaders;
 }
 
 static bool qDriverDictInit = false;
@@ -158,6 +177,7 @@ static void cleanDriverDict()
     qDeleteAll(QSparqlConnectionPrivate::driverDict());
     QSparqlConnectionPrivate::driverDict().clear();
     qDriverDictInit = false;
+    qDebug() << "executed cleanDriverDict added previously by qAddPostRoutine";
 }
 
 DriverDict &QSparqlConnectionPrivate::driverDict()
@@ -177,6 +197,7 @@ DriverDict &QSparqlConnectionPrivate::driverDict()
 
 QSparqlDriver* QSparqlConnectionPrivate::findDriver(const QString &type)
 {
+    qDebug() << "QSparqlConnectionPrivate::findDriver";
     QMutexLocker locker(&pluginMutex);
     // separately defined drivers (e.g., for tests)
     QSparqlDriver * driver = 0;
@@ -251,6 +272,7 @@ QMutex QSparqlConnectionPrivate::pluginMutex(QMutex::Recursive);
 
 void QSparqlConnectionPrivate::initKeys()
 {
+    qDebug() << "QSparqlConnectionPrivate::initKeys()";
     static bool keysRead = false;
 
     if (keysRead)
@@ -270,11 +292,12 @@ void QSparqlConnectionPrivate::initKeys()
                 qDebug() << "QSparqlConnection looking at" << fileName;
             }
 
-            QPluginLoader loader(fileName);
-            QObject* instance = loader.instance();
+            QPluginLoader *loader = new QPluginLoader(fileName);
+            QObject* instance = loader->instance();
             QFactoryInterface *factory = qobject_cast<QFactoryInterface*>(instance);
             QSparqlDriverPlugin* driPlu = dynamic_cast<QSparqlDriverPlugin*>(factory);
             if (instance && factory && driPlu) {
+                pluginLoaders().push_back(loader);
                 QStringList keys = factory->keys();
                 for (int k = 0; k < keys.size(); ++k) {
                     // Don't override values in plugins; this prefers plugins
@@ -298,7 +321,6 @@ void QSparqlConnectionPrivate::initKeys()
 
         }
     }
-
     keysRead = true;
     return;
 }
@@ -308,6 +330,7 @@ QSparqlDriver* QSparqlConnectionPrivate::findDriverWithPluginLoader(const QStrin
 #if WE_ARE_QT
     return 0;
 #else
+    qDebug() << "QSparqlConnectionPrivate::findDriverWithPluginLoader";
     initKeys();
 
     if (plugins.contains(type))
@@ -381,6 +404,7 @@ QSparqlConnection::QSparqlConnection(const QString& type,
                                      QObject* parent)
     : QObject(parent)
 {
+    qDebug() << "QSparqlConnection c'tor";
     QSparqlDriver* driver = QSparqlConnectionPrivate::findDriver(type);
     d = new QSparqlConnectionPrivate(driver, type, options);
     d->driver->open(d->options);
