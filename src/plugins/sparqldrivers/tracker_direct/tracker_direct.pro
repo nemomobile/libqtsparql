@@ -4,15 +4,19 @@ CONFIG += no_keywords
 HEADERS         = ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_p.h \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_driver_p.h \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_result_p.h \
+                  ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_faf_result_p.h \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_select_result_p.h \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_sync_result_p.h \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_update_result_p.h
+
 SOURCES         = main.cpp \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_driver_p.cpp \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_result_p.cpp \
+                  ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_faf_result_p.cpp \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_select_result_p.cpp \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_sync_result_p.cpp \
                   ../../../sparql/drivers/tracker_direct/qsparql_tracker_direct_update_result_p.cpp
+
 
 unix: {
     CONFIG += link_pkgconfig

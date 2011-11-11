@@ -106,7 +106,7 @@ void tst_QSparqlTracker::initTestCase()
     // For running the test without installing the plugins. Should work in
     // normal and vpath builds.
     QCoreApplication::addLibraryPath("../../../plugins");
-    qInstallMsgHandler(myMessageOutput);
+//    qInstallMsgHandler(myMessageOutput);
 
     // clean any remainings
     cleanupTestCase();
@@ -338,7 +338,7 @@ void tst_QSparqlTracker::delete_unfinished_result()
 
 void tst_QSparqlTracker::fire_and_forget()
 {
-    QSparqlConnection conn("QTRACKER");
+    QSparqlConnection conn("QTRACKER_DIRECT");
     QSparqlQuery add("insert { <fireandforget> a nco:PersonContact; "
                      "nie:isLogicalPartOf <qsparql-tracker-tests> ;"
                      "nco:nameGiven \"addedname006\" .}",
@@ -394,7 +394,7 @@ void tst_QSparqlTracker::fire_and_forget()
 
 void tst_QSparqlTracker::fire_and_forget_behaviour()
 {
-    QSparqlConnection conn("QTRACKER");
+    QSparqlConnection conn("QTRACKER_DIRECT");
     QSparqlQuery add("insert { <fireandforget> a nco:PersonContact; "
                      "nie:isLogicalPartOf <qsparql-tracker-tests> ;"
                      "nco:nameGiven \"addedname006\" .}",

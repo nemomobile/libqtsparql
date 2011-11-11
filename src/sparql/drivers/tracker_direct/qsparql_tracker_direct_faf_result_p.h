@@ -37,59 +37,51 @@
 **
 ****************************************************************************/
 
-#ifndef QSPARQL_TRACKER_DIRECT_H
-#define QSPARQL_TRACKER_DIRECT_H
+#ifndef QSPARQL_TRACKER_DIRECT_FAF_RESULT_P_H
+#define QSPARQL_TRACKER_DIRECT_FAF_RESULT_P_H
 
-#include <QtSparql/private/qsparqldriver_p.h>
-
-#ifdef QT_PLUGIN
-#define Q_EXPORT_SPARQLDRIVER_TRACKER_DIRECT
-#else
-#define Q_EXPORT_SPARQLDRIVER_TRACKER_DIRECT Q_SPARQL_EXPORT
-#endif
+#include <tracker-sparql.h>
+#include "qsparql_tracker_direct_result_p.h"
 
 QT_BEGIN_HEADER
 
 QT_BEGIN_NAMESPACE
 
 class QTrackerDirectDriverPrivate;
+class QSparqlQueryOptions;
 
-class Q_EXPORT_SPARQLDRIVER_TRACKER_DIRECT QTrackerDirectDriver : public QSparqlDriver
+// A sync and forward-only Result class. The instance of this class is retreved
+// with QTrackerDirectDriver::syncExec().
+class QTrackerDirectFAFResult : public QTrackerDirectResult
 {
     Q_OBJECT
 public:
-    explicit QTrackerDirectDriver(QObject *parent=0);
-    ~QTrackerDirectDriver();
+    explicit QTrackerDirectFAFResult(QTrackerDirectDriverPrivate* p,
+                                      const QString& query,
+                                      QSparqlQuery::StatementType type,
+                                      const QSparqlQueryOptions& options);
+    ~QTrackerDirectFAFResult();
 
-    // Implementation of the QSparqlDriver interface
-    bool hasFeature(QSparqlConnection::Feature f) const;
-    bool open(const QSparqlConnectionOptions& options);
-    void close();
-    QSparqlResult* exec(const QString& query,
-                         QSparqlQuery::StatementType type,
-                         const QSparqlQueryOptions& options);
+    // Implementation of the QSparqlResult interface
+    virtual QSparqlResultRow current() const;
+    virtual QSparqlBinding binding(int i) const;
+    virtual QVariant value(int i) const;
 
-Q_SIGNALS:
-    void opened();
-    void closing();
+    virtual bool isFinished() const;
+    virtual bool hasFeature(QSparqlResult::Feature feature) const;
+
+public Q_SLOTS:
+    virtual void exec();
 
 private:
-    QSparqlResult* asyncExec(const QString& query,
-                            QSparqlQuery::StatementType type,
-                            const QSparqlQueryOptions& options);
-    QSparqlResult* syncExec(const QString& query,
-                            QSparqlQuery::StatementType type,
-                            const QSparqlQueryOptions& options);
-    QSparqlResult* fafExec(const QString& query,
-                           QSparqlQuery::StatementType type,
-                           const QSparqlQueryOptions& options);
-private:
-    friend class QTrackerDirectDriverPrivate;
-    QTrackerDirectDriverPrivate* d;
+    virtual void stopAndWait();
+    void runQuery();
+    void updateQuery();
+    void terminate();
 };
 
 QT_END_NAMESPACE
 
 QT_END_HEADER
 
-#endif // QSPARQL_TRACKER_DIRECT_DRIVER_P_H
+#endif // QSPARQL_TRACKER_DIRECT_FAF_RESULT_P_H

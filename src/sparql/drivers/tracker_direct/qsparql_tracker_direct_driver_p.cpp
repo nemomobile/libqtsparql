@@ -42,6 +42,7 @@
 #include "qsparql_tracker_direct_select_result_p.h"
 #include "qsparql_tracker_direct_sync_result_p.h"
 #include "qsparql_tracker_direct_update_result_p.h"
+#include "qsparql_tracker_direct_faf_result_p.h"
 
 #include <qsparqlconnection.h>
 
@@ -423,15 +424,18 @@ QSparqlResult* QTrackerDirectDriver::exec(const QString &query, QSparqlQuery::St
     QSparqlResult* result = 0;
     QString query_with_prefixes(query);
     query_with_prefixes.prepend(prefixes());
-    switch (options.executionMethod()) {
-    case QSparqlQueryOptions::AsyncExec:
-        result = asyncExec(query_with_prefixes, type, options);
-        break;
-    case QSparqlQueryOptions::SyncExec:
-        result = syncExec(query_with_prefixes, type, options);
-        break;
+    if (options.isFireAndForget() && (type != QSparqlQuery::AskStatement && type != QSparqlQuery::SelectStatement)) {
+        result = fafExec(query_with_prefixes, type, options);
+    } else {
+        switch (options.executionMethod()) {
+        case QSparqlQueryOptions::AsyncExec:
+            result = asyncExec(query_with_prefixes, type, options);
+            break;
+        case QSparqlQueryOptions::SyncExec:
+            result = syncExec(query_with_prefixes, type, options);
+            break;
+        }
     }
-
     return result;
 }
 
@@ -458,6 +462,17 @@ QSparqlResult* QTrackerDirectDriver::syncExec
     // NB:#287141 - Instead of connecting syncExec results to the driver closing() signal, we'll add them
     // to a list of QPointers. When the driver is deleted we can check this list for any non-null
     // results (i.e re-parented results) and call driverClosing() on them directly.
+    d->addActiveSyncResult(result);
+    d->waitForConnectionOpen();
+    result->exec();
+    return result;
+}
+
+QSparqlResult* QTrackerDirectDriver::fafExec
+        (const QString& query, QSparqlQuery::StatementType type, const QSparqlQueryOptions& options)
+{
+    qDebug() << "new faf result";
+    QTrackerDirectResult* result = new QTrackerDirectFAFResult(d, query, type, options);
     d->addActiveSyncResult(result);
     d->waitForConnectionOpen();
     result->exec();
