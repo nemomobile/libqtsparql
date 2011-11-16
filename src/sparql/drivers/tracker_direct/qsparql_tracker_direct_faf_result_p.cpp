@@ -117,6 +117,13 @@ QVariant QTrackerDirectFAFResult::value(int i) const
     return QVariant();
 }
 
+int QTrackerDirectFAFResult::size() const
+{
+    // Always return 0 here, since there won't be any
+    // reply
+    return 0;
+}
+
 void QTrackerDirectFAFResult::stopAndWait()
 {
 }
@@ -131,7 +138,6 @@ bool QTrackerDirectFAFResult::hasFeature(QSparqlResult::Feature feature) const
     switch (feature) {
     case QSparqlResult::Sync:
     case QSparqlResult::ForwardOnly:
-        return true;
     case QSparqlResult::QuerySize:
         return false;
     default:

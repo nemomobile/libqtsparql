@@ -471,7 +471,6 @@ QSparqlResult* QTrackerDirectDriver::syncExec
 QSparqlResult* QTrackerDirectDriver::fafExec
         (const QString& query, QSparqlQuery::StatementType type, const QSparqlQueryOptions& options)
 {
-    qDebug() << "new faf result";
     QTrackerDirectResult* result = new QTrackerDirectFAFResult(d, query, type, options);
     d->addActiveSyncResult(result);
     d->waitForConnectionOpen();

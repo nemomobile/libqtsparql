@@ -98,13 +98,17 @@ private slots:
 
     void syncExec_waitForFinished_update_query_test();
     void syncExec_waitForFinished_update_query_test_data();
-    
+
     void query_with_prefix();
     void query_with_prefix_data();
 
     void go_beyond_columns_number();
     void go_beyond_columns_number_data();
 
+    void fire_and_forget();
+    void fire_and_forget_data();
+    void fire_and_forget_behaviour();
+    void fire_and_forget_behaviour_data();
 private:
     void insertTrackerTestData();
     void insertEndpointTestData();
@@ -1755,5 +1759,130 @@ void tst_QSparqlAPI::go_beyond_columns_number_data()
     query_test_data();
 }
 
+void tst_QSparqlAPI::fire_and_forget()
+{
+    QFETCH(QString, driverName);
+    QSparqlConnection conn(driverName);
+
+    // fire and forget 5 new contacts
+    QString addQuery = "insert { <fireandforget-%1> a nco:PersonContact; "
+                       "nie:isLogicalPartOf <qsparql-api-tests-faf>; "
+                       "nco:nameGiven \"addedname-%1\" .} ";
+    QSparqlQueryOptions options;
+    QSparqlResult *r = 0;
+
+    options.setFireAndForget(true);
+    for (int i=0;i<5;i++) {
+        QString statement = addQuery.arg(i);
+        r = conn.exec(QSparqlQuery(statement, QSparqlQuery::InsertStatement), options);
+        QVERIFY(r->isFinished());
+        CHECK_QSPARQL_RESULT(r);
+        delete r;
+    }
+    // Verify that the insertion succeeded and that setting fireAndForget
+    // to true for select queries has no impact
+    QTest::qWait(5000);
+    QSparqlQuery q("select ?addeduri ?ng {?addeduri a nco:PersonContact; "
+                   "nie:isLogicalPartOf <qsparql-api-tests-faf> ;"
+                   "nco:nameGiven ?ng .}");
+    QHash<QString, QSparqlBinding> contactNames;
+    r = conn.exec(q, options);
+    QVERIFY(!r->isFinished());
+    CHECK_QSPARQL_RESULT(r);
+    r->waitForFinished();
+    CHECK_QSPARQL_RESULT(r);
+    QCOMPARE(r->size(), 5);
+    while (r->next()) {
+        contactNames[r->binding(1).value().toString()] = r->binding(0);
+    }
+    QCOMPARE(contactNames.size(), 5);
+    // Now validate the contact was added
+    for (int i=0;i<5;i++) {
+        QCOMPARE(contactNames[QString("addedname-%1").arg(i)].value().toString(),
+                 QString(QString("fireandforget-%1").arg(i)));
+    }
+    delete r;
+
+    // Delete the insert.
+    QSparqlQuery del("delete { ?u a rdfs:Resource } "
+                     "WHERE { ?u a rdfs:Resource; nie:isLogicalPartOf <qsparql-api-tests-faf>. }",
+                     QSparqlQuery::DeleteStatement);
+    r = conn.exec(del, options);
+    QVERIFY(r->isFinished());
+    CHECK_QSPARQL_RESULT(r);
+
+    // Now make sure the delete happend
+    QTest::qWait(5000);
+    r = conn.exec(q, options);
+    QVERIFY(!r->isFinished());
+    CHECK_QSPARQL_RESULT(r);
+    r->waitForFinished();
+    CHECK_QSPARQL_RESULT(r);
+    QCOMPARE(r->size(), 0);
+
+    delete r;
+}
+
+void tst_QSparqlAPI::fire_and_forget_data()
+{
+    QTest::addColumn<QString>("driverName");
+    QTest::newRow("Tracker") << "QTRACKER";
+    QTest::newRow("Tracker Direct") << "QTRACKER_DIRECT";
+}
+
+void tst_QSparqlAPI::fire_and_forget_behaviour()
+{
+    QFETCH(QString, driverName);
+    QSparqlConnection conn(driverName);
+    QSparqlQuery add("insert { <fireandforget> a nco:PersonContact; "
+                     "nie:isLogicalPartOf <qsparql-tracker-tests> ;"
+                     "nco:nameGiven \"addedname006\" .}",
+                     QSparqlQuery::InsertStatement);
+    QSparqlQueryOptions options;
+    options.setFireAndForget(true);
+    QSparqlResult* r = conn.exec(add, options);
+    // is finished should be instantly true
+    QVERIFY(r->isFinished());
+    // waitForFinished should not hang
+    r->waitForFinished();
+    // check the result to make sure there are no problems
+    // related to not waiting for the result reply
+    QCOMPARE(r->size(), 0);
+    QCOMPARE(r->value(0).toString(), QString(""));
+    QCOMPARE(r->current().count(), 0);
+    QCOMPARE(r->binding(0), QSparqlBinding());
+    // Check next, previous, and that the position isn't 0
+    QVERIFY(!r->next());
+    QVERIFY(!r->previous());
+    QVERIFY(!r->next());
+    QVERIFY(r->pos() != 0);
+    CHECK_QSPARQL_RESULT(r);
+    delete r;
+
+    // cleanup and do the check on deletes as well
+    QTest::qWait(5000);
+    QSparqlQuery del("delete { <fireandforget> a rdfs:Resource. }",
+                     QSparqlQuery::DeleteStatement);
+    r = conn.exec(del, options);
+    QVERIFY(r->isFinished());
+    r->waitForFinished();
+    QCOMPARE(r->size(), 0);
+    QCOMPARE(r->value(0).toString(), QString(""));
+    QCOMPARE(r->current().count(), 0);
+    QCOMPARE(r->binding(0), QSparqlBinding());
+    QVERIFY(!r->next());
+    QVERIFY(!r->previous());
+    QVERIFY(!r->next());
+    QVERIFY(r->pos() != 0);
+    CHECK_QSPARQL_RESULT(r);
+    delete r;
+}
+
+void tst_QSparqlAPI::fire_and_forget_behaviour_data()
+{
+    QTest::addColumn<QString>("driverName");
+    QTest::newRow("Tracker") << "QTRACKER";
+    QTest::newRow("Tracker Direct") << "QTRACKER_DIRECT";
+}
 QTEST_MAIN( tst_QSparqlAPI )
 #include "tst_qsparql_api.moc"
