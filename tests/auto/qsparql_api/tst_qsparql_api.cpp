@@ -105,6 +105,9 @@ private slots:
     void go_beyond_columns_number();
     void go_beyond_columns_number_data();
 
+    void hasFeature_test();
+    void hasFeature_test_data();
+
 private:
     void insertTrackerTestData();
     void insertEndpointTestData();
@@ -1763,6 +1766,71 @@ void tst_QSparqlAPI::go_beyond_columns_number()
 void tst_QSparqlAPI::go_beyond_columns_number_data()
 {
     query_test_data();
+}
+
+void tst_QSparqlAPI::hasFeature_test()
+{
+    QFETCH(QString, connectionDriver);
+    QFETCH(bool, querySize);
+    QFETCH(bool, defaultGraph);
+    QFETCH(bool, askQueries);
+    QFETCH(bool, constructQueries);
+    QFETCH(bool, updateQueries);
+    QFETCH(bool, syncExec);
+    QFETCH(bool, asyncExec);
+
+    QSparqlConnection connection(connectionDriver);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::QuerySize), querySize);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::DefaultGraph), defaultGraph);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::AskQueries), askQueries);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::ConstructQueries), constructQueries);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::UpdateQueries), updateQueries);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::SyncExec), syncExec);
+    QCOMPARE(connection.hasFeature(QSparqlConnection::AsyncExec), asyncExec);
+}
+
+void tst_QSparqlAPI::hasFeature_test_data()
+{
+    QTest::addColumn<QString>("connectionDriver");
+    QTest::addColumn<bool>("querySize");
+    QTest::addColumn<bool>("defaultGraph");
+    QTest::addColumn<bool>("askQueries");
+    QTest::addColumn<bool>("constructQueries");
+    QTest::addColumn<bool>("updateQueries");
+    QTest::addColumn<bool>("syncExec");
+    QTest::addColumn<bool>("asyncExec");
+
+    QTest::newRow("Tracker DBUS hasFeature test")
+        << "QTRACKER"
+        << true
+        << true
+        << true
+        << false
+        << true
+        << false
+        << true;
+
+    QTest::newRow("Tracker Direct hasFeature test")
+        << "QTRACKER_DIRECT"
+        << true
+        << true
+        << true
+        << false
+        << true
+        << true
+        << true;
+    /* TODO: check if endpoint actually does
+     * support DefaultGraph
+    QTest::newRow("Endpoint hasFeature test")
+        << "QSPARQL_ENDPOINT"
+        << true
+        << true
+        << true
+        << true
+        << true
+        << false
+        << true;
+        */
 }
 
 QTEST_MAIN( tst_QSparqlAPI )

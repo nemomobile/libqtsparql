@@ -344,9 +344,9 @@ bool QTrackerDirectDriver::hasFeature(QSparqlConnection::Feature f) const
     case QSparqlConnection::UpdateQueries:
     case QSparqlConnection::DefaultGraph:
     case QSparqlConnection::SyncExec:
+    case QSparqlConnection::AsyncExec:
         return true;
     case QSparqlConnection::ConstructQueries:
-    case QSparqlConnection::AsyncExec:
         return false;
     default:
         return false;
