@@ -66,6 +66,7 @@
 #include <QtXml/QDomElement>
 #include <QtXml/QXmlDefaultHandler>
 #include <QtXml/QXmlInputSource>
+#include <QTimer>
 
 #include <qdebug.h>
 
@@ -160,6 +161,7 @@ public:
     QVector<QSparqlResultRow> results;
     bool isFinished;
     bool noResults;
+    QTimer timerTimeout;
     QEventLoop *loop;
     EndpointResult *q;
     EndpointDriverPrivate *driverPrivate;
@@ -170,6 +172,7 @@ public Q_SLOTS:
     void handleError(QNetworkReply::NetworkError code);
     void terminate();
     void parseResults();
+    void serverTimeout();
 };
 
 
@@ -350,6 +353,18 @@ void EndpointResultPrivate::parseResults()
     return;
 }
 
+void EndpointResultPrivate::serverTimeout()
+{
+    if (isFinished)
+        return;
+
+    reply->abort();
+    qWarning() << "EndpointDriver: server timeout(server not responding)";
+
+    terminate();
+    return;
+}
+
 EndpointResult::EndpointResult(EndpointDriverPrivate* p)
 {
     d = new EndpointResultPrivate(this, p);
@@ -434,6 +449,13 @@ bool EndpointResult::exec(const QString& query, QSparqlQuery::StatementType type
     }
 
     // qDebug() << "Real url to run.... " << queryUrl.toString();
+
+    //Let's use the same option 'timeout' for setting timeout timer on connection reply
+    if (timeout.isValid() && timeout.toInt() > 0) {
+        connect(&d->timerTimeout, SIGNAL(timeout()), d, SLOT(serverTimeout()));
+        d->timerTimeout.setSingleShot(true);
+        d->timerTimeout.start(timeout.toInt());
+    }
 
     d->buffer.clear();
     QNetworkRequest request(queryUrl);
