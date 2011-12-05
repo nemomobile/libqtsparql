@@ -135,8 +135,8 @@ class EndpointResultPrivate  : public QObject {
     Q_OBJECT
 public:
     EndpointResultPrivate(EndpointResult *result, EndpointDriverPrivate *dpp)
-    : reply(0), xml(0), parser(0), reader(0),
-        isFinished(false), loop(0), q(result), driverPrivate(dpp), noResults(false)
+    : reply(0), xml(0), parser(0), reader(0), isFinished(false),
+        noResults(false),loop(0), q(result), driverPrivate(dpp)
     {
     }
 
