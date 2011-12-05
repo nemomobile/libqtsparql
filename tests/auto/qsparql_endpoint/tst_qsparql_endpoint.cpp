@@ -172,11 +172,10 @@ void tst_QSparqlEndpoint::query_with_error()
 
 void tst_QSparqlEndpoint::select_query_server_not_responding()
 {
-    QSKIP("Neither endpoint driver nor QNetworkAccessManager has timeout functionality", SkipAll);
-    // When connection is established but server doesn't respond, client (endpoint driver) hangs
     QSparqlConnectionOptions options;
     options.setPort(8080);
     options.setHostName("127.0.0.1");
+    options.setOption("timeout", 2000);
     QSparqlConnection conn("QSPARQL_ENDPOINT", options);
 
     QSparqlQuery q("SELECT ?book ?who "
@@ -191,6 +190,7 @@ void tst_QSparqlEndpoint::select_query_server_not_responding()
     r->waitForFinished(); // this test is synchronous only
     endpointService->resume();
     QCOMPARE(r->hasError(), true);
+    QCOMPARE(r->lastError().type(), QSparqlError::ConnectionError);
     delete r;
 }
 
