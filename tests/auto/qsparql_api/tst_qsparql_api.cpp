@@ -386,18 +386,24 @@ QString getTemplateArguments(QString driver, QString query)
 
 tst_QSparqlAPI::tst_QSparqlAPI()
 {
-}
-
-tst_QSparqlAPI::~tst_QSparqlAPI()
-{
-}
-
-void tst_QSparqlAPI::initTestCase()
-{
     endpointService = new EndpointService(8080);
     endpointService->start();
     while (!endpointService->isRunning())
         QTest::qWait(100);
+}
+
+tst_QSparqlAPI::~tst_QSparqlAPI()
+{
+    if(endpointService)
+    {
+        endpointService->stopService(2000);
+        delete endpointService;
+        endpointService=0;
+    }
+}
+
+void tst_QSparqlAPI::initTestCase()
+{
     // For running the test without installing the plugins. Should work in
     // normal and vpath builds.
     QCoreApplication::addLibraryPath("../../../plugins");
@@ -431,8 +437,6 @@ void tst_QSparqlAPI::insertTrackerTestData()
 void tst_QSparqlAPI::cleanupTestCase()
 {
     cleanupTrackerTestData();
-    endpointService->stopService(2000);
-    delete endpointService;
 }
 
 void tst_QSparqlAPI::cleanupTrackerTestData()
