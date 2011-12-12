@@ -42,6 +42,7 @@
 
 #include "../messagerecorder.h"
 #include "../testhelpers.h"
+#include "EndpointService.h"
 
 // define the amount of data we are going to insert for the tests
 #define NUM_INSERTS 15
@@ -121,6 +122,7 @@ private:
 private:
     MessageRecorder *msgRecorder;
     bool testEndpoint;
+    EndpointService *endpointService;
 };
 
 namespace {
@@ -402,6 +404,10 @@ tst_QSparqlAPI::~tst_QSparqlAPI()
 
 void tst_QSparqlAPI::initTestCase()
 {
+    endpointService = new EndpointService(8080);
+    endpointService->start();
+    while (!endpointService->isRunning())
+        QTest::qWait(100);
     // For running the test without installing the plugins. Should work in
     // normal and vpath builds.
     QCoreApplication::addLibraryPath("../../../plugins");
@@ -461,6 +467,8 @@ void tst_QSparqlAPI::cleanupTestCase()
     cleanupTrackerTestData();
     if (testEndpoint)
         cleanupEndpointTestData();
+    endpointService->stopService(2000);
+    delete endpointService;
 }
 
 void tst_QSparqlAPI::cleanupTrackerTestData()

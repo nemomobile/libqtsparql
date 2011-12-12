@@ -1,7 +1,11 @@
 include(../sparqltest.pri)
 CONFIG += qt warn_on console depend_includepath
-QT += testlib
-SOURCES  += tst_qsparql_api.cpp
+QT += testlib xml network
+HEADERS += EndpointService.h \
+           EndpointServer.h
+SOURCES  += tst_qsparql_api.cpp \
+            EndpointService.cpp \
+            EndpointServer.cpp
 
 check.depends = $$TARGET
 check.commands = ./tst_qsparql_api
