@@ -41,6 +41,8 @@
 #include <QTextStream>
 #include <QTcpSocket>
 #include <QStringList>
+#include <QUrl>
+#include <QtSparql/QtSparql>
 
 EndpointServer::EndpointServer(int _port) : port(_port), disabled(true)
 {
@@ -77,6 +79,15 @@ void EndpointServer::incomingConnection(int socket)
 
 QString EndpointServer::sparqlData(QString url)
 {
+    QStringList urlSplitted=url.split("query=");
+    QUrl urli = QUrl::fromEncoded(urlSplitted.at(1).toAscii());
+    QString query = urli.toString();
+
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q(query);
+    QSparqlResult* r = conn.exec(q);
+    r->waitForFinished();
+
     // returned data is based on http://www.w3.org/TR/rdf-sparql-protocol/
     QString result;
     result="HTTP/1.0 200 Ok\r\n"
