@@ -42,6 +42,7 @@
 #include <QTcpSocket>
 #include <QStringList>
 #include <QUrl>
+#include <QDomDocument>
 #include <QtSparql/QtSparql>
 
 EndpointServer::EndpointServer(int _port) : port(_port), disabled(true)
@@ -83,17 +84,28 @@ QString EndpointServer::sparqlData(QString url)
     QUrl urli = QUrl::fromEncoded(urlSplitted.at(1).toAscii());
     QString query = urli.toString();
 
-    QSparqlConnection conn("QTRACKER_DIRECT");
-    QSparqlQuery q(query);
-    QSparqlResult* r = conn.exec(q);
-    r->waitForFinished();
-
     // returned data is based on http://www.w3.org/TR/rdf-sparql-protocol/
     QString result;
     result="HTTP/1.0 200 Ok\r\n"
            "Content-Type: text/html; charset=\"utf-8\"\r\n"
            "\r\n";
 
+    //basic XML tree
+    QDomDocument tracker_result;
+    QDomElement sparql = tracker_result.createElement("sparql");
+    QDomElement results = tracker_result.createElement("results");
+    sparql.setAttribute("xmlns", "http://www.w3.org/2005/sparql-results#");
+    tracker_result.appendChild(sparql);
+    sparql.appendChild(results);
+
+
+    QSparqlConnection conn("QTRACKER_DIRECT");
+    QSparqlQuery q(query);
+    QSparqlResult* r = conn.exec(q);
+    r->waitForFinished();
+
+    //append xml to html header
+    result+= tracker_result.toString();
     return result;
 }
 
