@@ -108,9 +108,7 @@ private slots:
 
 private:
     void insertTrackerTestData();
-    void insertEndpointTestData();
     void cleanupTrackerTestData();
-    void cleanupEndpointTestData();
     void add_query_test_data(const QString& connectionDriver, const QString& dataTagPrefix);
     void add_query_error_test_data(const QString& connectionDriver, const QString& dataTagPrefix, bool supportsConstruct);
     void add_query_destroy_connection_test_data(const QString& connectionDriver, const QString& dataTagPrefix);
@@ -373,7 +371,7 @@ QSparqlConnectionOptions getConnectionOptions(QString driver)
     QSparqlConnectionOptions options;
     if (driver == "QSPARQL_ENDPOINT") {
         options.setHostName("127.0.0.1");
-        options.setPort(8890);
+        options.setPort(8080);
         return options;
     }
     return options;
@@ -381,15 +379,7 @@ QSparqlConnectionOptions getConnectionOptions(QString driver)
 
 QString getTemplateArguments(QString driver, QString query)
 {
-    if (driver == "QSPARQL_ENDPOINT") {
-        if (query == "SELECT" || query == "DELETE") {
-            return "FROM <http://virtuoso_endpoint/testgraph>";
-        } else {
-            return "INTO <http://virtuoso_endpoint/testgraph>";
-        }
-    } else {
-        return "";
-    }
+    return "";
 }
 
 } // end unnamed namespace
@@ -412,10 +402,9 @@ void tst_QSparqlAPI::initTestCase()
     // normal and vpath builds.
     QCoreApplication::addLibraryPath("../../../plugins");
 
-    testEndpoint = false;
+    testEndpoint = true;
     cleanupTestCase();
     insertTrackerTestData();
-    insertEndpointTestData();
 }
 
 void tst_QSparqlAPI::insertTrackerTestData()
@@ -439,34 +428,9 @@ void tst_QSparqlAPI::insertTrackerTestData()
     delete r;
 }
 
-void tst_QSparqlAPI::insertEndpointTestData()
-{
-    const QString insertQueryTemplate =
-        "<uri00%1> a nco:PersonContact, nie:InformationElement ;"
-        "nie:isLogicalPartOf <qsparql-api-tests> ;"
-        "nco:nameGiven \"name00%1\" .";
-    QString insertQuery = "insert into <http://virtuoso_endpoint/testgraph> { <qsparql-api-tests> a nie:InformationElement .";
-    for (int item = 1; item <= NUM_INSERTS; item++) {
-        insertQuery.append( insertQueryTemplate.arg(item) );
-    }
-    insertQuery.append(" }");
-    QSparqlConnectionOptions options = getConnectionOptions("QSPARQL_ENDPOINT");
-    QSparqlConnection conn("QSPARQL_ENDPOINT", options);
-    const QSparqlQuery q(insertQuery,QSparqlQuery::InsertStatement);
-    QSparqlResult* r = conn.exec(q);
-    r->waitForFinished();
-    if (!r->hasError()) {
-        testEndpoint = true;
-    }
-    delete r;
-
-}
-
 void tst_QSparqlAPI::cleanupTestCase()
 {
     cleanupTrackerTestData();
-    if (testEndpoint)
-        cleanupEndpointTestData();
     endpointService->stopService(2000);
     delete endpointService;
 }
@@ -478,21 +442,6 @@ void tst_QSparqlAPI::cleanupTrackerTestData()
                          "  WHERE { ?u nie:isLogicalPartOf <qsparql-api-tests> . }"
                          "DELETE { <qsparql-api-tests> a rdfs:Resource . }",
                     QSparqlQuery::DeleteStatement);
-    QSparqlResult* r = conn.exec(q);
-    QVERIFY(!r->hasError());
-    r->waitForFinished();
-    QVERIFY(!r->hasError());
-    delete r;
-}
-
-void tst_QSparqlAPI::cleanupEndpointTestData()
-{
-    QSparqlConnectionOptions options = getConnectionOptions("QSPARQL_ENDPOINT");
-    QSparqlConnection conn("QSPARQL_ENDPOINT", options);
-    const QSparqlQuery q("DELETE FROM <http://virtuoso_endpoint/testgraph> { ?u a nco:PersonContact . } "
-                         "WHERE { ?u nie:isLogicalPartOf <qsparql-api-tests> .}",
-                     QSparqlQuery::DeleteStatement);
-
     QSparqlResult* r = conn.exec(q);
     QVERIFY(!r->hasError());
     r->waitForFinished();
