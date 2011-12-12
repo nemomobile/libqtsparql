@@ -483,6 +483,7 @@ void tst_QSparqlAPI::connection_test_data()
     QTest::newRow("dbus driver") << "QTRACKER" << true;
     QTest::newRow("direct driver") <<  "QTRACKER_DIRECT" << true;
     QTest::newRow("dummy driver") << "QTRACKER_DUMMY" << false;
+    QTest::newRow("endpoint driver") << "QSPARQL_ENDPOINT" << true;
 
 }
 
