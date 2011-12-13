@@ -109,34 +109,42 @@ QString EndpointServer::sparqlData(QString url)
     QSparqlResult* r = conn.exec(q);
     r->waitForFinished();
 
-    while (r->next()) {
-        QDomElement result = tracker_result.createElement("result");
-        int index=0;
-        while(r->binding(index).isValid())
-        {
-            QDomElement binding = tracker_result.createElement("binding");
-            QDomText value = tracker_result.createTextNode(r->binding(index).value().toString());
-            if(r->binding(index).isUri())
-            {
-                QDomElement uri = tracker_result.createElement("uri");
-                uri.appendChild(value);
-                binding.appendChild(uri);
-            }
-            if(r->binding(index).isLiteral())
-            {
-                QDomElement literal = tracker_result.createElement("literal");
-                literal.appendChild(value);
-                binding.appendChild(literal);
-            }
-
-            result.appendChild(binding);
-            index++;
-        }
-        results.appendChild(result);
+    if (r->isBool()) {
+        QDomElement boolean = tracker_result.createElement("boolean");
+        QDomText value = tracker_result.createTextNode(r->boolValue()?"true":"false");
+        boolean.appendChild(value);
+        sparql.appendChild(boolean);
     }
+    else
+    {
+        while (r->next()) {
+            QDomElement result = tracker_result.createElement("result");
+            int index=0;
+            while(r->binding(index).isValid())
+            {
+                QDomElement binding = tracker_result.createElement("binding");
+                QDomText value = tracker_result.createTextNode(r->binding(index).value().toString());
+                if(r->binding(index).isUri())
+                {
+                    QDomElement uri = tracker_result.createElement("uri");
+                    uri.appendChild(value);
+                    binding.appendChild(uri);
+                }
+                if(r->binding(index).isLiteral())
+                {
+                    QDomElement literal = tracker_result.createElement("literal");
+                    literal.appendChild(value);
+                    binding.appendChild(literal);
+                }
 
+                result.appendChild(binding);
+                index++;
+            }
+            results.appendChild(result);
+        }
+        sparql.appendChild(results);
+    }
     //append xml to html header
-    sparql.appendChild(results);
     tracker_result.appendChild(sparql);
     result+= tracker_result.toString();
     return result;
