@@ -98,7 +98,14 @@ QString EndpointServer::sparqlData(QString url)
 
 
     QSparqlConnection conn("QTRACKER_DIRECT");
-    QSparqlQuery q(query);
+    QSparqlQuery::StatementType queryType = QSparqlQuery::SelectStatement;
+    if(query.contains("insert"))
+        queryType = QSparqlQuery::InsertStatement;
+    else if(query.contains("delete"))
+        queryType = QSparqlQuery::DeleteStatement;
+    else if(query.contains("ask"))
+        queryType = QSparqlQuery::AskStatement;
+    QSparqlQuery q(query, queryType);
     QSparqlResult* r = conn.exec(q);
     r->waitForFinished();
 
