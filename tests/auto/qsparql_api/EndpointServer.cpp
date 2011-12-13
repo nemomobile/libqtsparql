@@ -109,7 +109,10 @@ QString EndpointServer::sparqlData(QString url)
     QSparqlResult* r = conn.exec(q);
     r->waitForFinished();
 
-    if (r->isBool()) {
+    if(r->hasError()) {
+        return result + "error";
+    }
+    else if (r->isBool()) {
         QDomElement boolean = tracker_result.createElement("boolean");
         QDomText value = tracker_result.createTextNode(r->boolValue()?"true":"false");
         boolean.appendChild(value);
