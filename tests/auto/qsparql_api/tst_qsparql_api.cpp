@@ -508,7 +508,6 @@ void tst_QSparqlAPI::query_test()
     if(connectionDriver == "QTRACKER_DIRECT")
         QTest::qWait(1000);
     QCOMPARE(conn.hasError(), false);
-
     QSparqlQueryOptions queryOptions;
     queryOptions.setForwardOnly(forwardOnly);
     queryOptions.setExecutionMethod(QSparqlQueryOptions::ExecutionMethod(executionMethod));
@@ -689,7 +688,8 @@ void tst_QSparqlAPI::query_error_test()
 
     checkExecutionMethod(r, executionMethod, useAsyncObject);
     validateErrorResult(r, expectedErrorType);
-    QCOMPARE((*msgRecorder)[QtWarningMsg].count(), 1);
+    if(connectionDriver!="QSPARQL_ENDPOINT")
+        QCOMPARE((*msgRecorder)[QtWarningMsg].count(), 1);
 
     delete r;
 }
@@ -881,7 +881,8 @@ void tst_QSparqlAPI::query_destroy_connection_test()
     }
 
     // There must always be a warning about connection closed before result
-    QCOMPARE((*msgRecorder)[QtWarningMsg].count(), 1);
+    if(connectionDriver!="QSPARQL_ENDPOINT")
+        QCOMPARE((*msgRecorder)[QtWarningMsg].count(), 1);
 
     delete r;
 }
@@ -1080,7 +1081,8 @@ void tst_QSparqlAPI::update_query_error_test()
 
         checkExecutionMethod(r, executionMethod, useAsyncObject);
         validateErrorResult(r, expectedErrorType);
-        QCOMPARE((*msgRecorder)[QtWarningMsg].count(), round);
+        if(connectionDriver!="QSPARQL_ENDPOINT")
+            QCOMPARE((*msgRecorder)[QtWarningMsg].count(), round);
 
         delete r;
         // also check delete statments
@@ -1204,7 +1206,8 @@ void tst_QSparqlAPI::update_query_destroy_connection_test()
         }
         validateResults(r, 0);
         // Check we got a warning
-        QCOMPARE((*msgRecorder)[QtWarningMsg].count(), round);
+        if(connectionDriver!="QSPARQL_ENDPOINT")
+            QCOMPARE((*msgRecorder)[QtWarningMsg].count(), round);
         delete r;
 
         QSparqlResult* cleanupResult = cleanupConn.syncExec(
