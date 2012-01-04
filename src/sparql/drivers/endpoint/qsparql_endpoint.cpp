@@ -359,9 +359,8 @@ void EndpointResultPrivate::serverTimeout()
         return;
 
     reply->abort();
+    q->setLastError(QSparqlError(QLatin1String("EndpointDriver: server timeout(server not responding)"), QSparqlError::ConnectionError));
     qWarning() << "EndpointDriver: server timeout(server not responding)";
-
-    terminate();
     return;
 }
 
