@@ -107,6 +107,7 @@ public:
     static QSparqlDriver* findDriver(const QString& type);
     static QSparqlDriver* findDriverWithFactoryLoader(const QString& type);
     static void initKeys();
+    static void initInstance(QObject *instance, int debugLevel);
     static QSparqlDriver* findDriverWithPluginLoader(const QString& type);
     static void registerConnectionCreator(const QString &type,
                                           QSparqlDriverCreatorBase* creator);
@@ -235,6 +236,29 @@ QStringList QSparqlConnectionPrivate::allKeys;
 QHash<QString, QSparqlDriverPlugin*> QSparqlConnectionPrivate::plugins;
 QMutex QSparqlConnectionPrivate::pluginMutex(QMutex::Recursive);
 
+void QSparqlConnectionPrivate::initInstance(QObject *instance, int debugLevel)
+{
+    QSparqlDriverPlugin *driPlu = qobject_cast<QSparqlDriverPlugin*>(instance);
+    if (driPlu) {
+        QStringList keys = driPlu->keys();
+        for (int k = 0; k < keys.size(); ++k) {
+            // Don't override values in plugins; this prefers plugins
+            // that are found first.  E.g.,
+            // QCoreApplication::addLibraryPath() prepends a path to the
+            // list of library paths, and this say custom plugins are
+            // found first.
+            if (!plugins.contains(keys[k]))
+                plugins[keys[k]] = driPlu;
+        }
+        allKeys.append(keys);
+        if (debugLevel) {
+            qDebug() << "keys" << keys;
+        }
+    } else if (debugLevel) {
+        qDebug() << "not a plugin";
+    }
+}
+
 void QSparqlConnectionPrivate::initKeys()
 {
     static bool keysRead = false;
@@ -243,6 +267,10 @@ void QSparqlConnectionPrivate::initKeys()
         return;
 
     int debugLevel = QString::fromLatin1(getenv("QT_DEBUG_PLUGINS")).toInt();
+
+    Q_FOREACH (QObject *instance, QPluginLoader::staticInstances()) {
+        initInstance(instance, debugLevel);
+    }
 
     QStringList paths = QCoreApplication::libraryPaths();
     Q_FOREACH(const QString& path, paths) {
@@ -258,30 +286,7 @@ void QSparqlConnectionPrivate::initKeys()
 
             QPluginLoader loader(fileName);
             QObject* instance = loader.instance();
-            QFactoryInterface *factory = qobject_cast<QFactoryInterface*>(instance);
-            QSparqlDriverPlugin* driPlu = dynamic_cast<QSparqlDriverPlugin*>(factory);
-            if (instance && factory && driPlu) {
-                QStringList keys = factory->keys();
-                for (int k = 0; k < keys.size(); ++k) {
-                    // Don't override values in plugins; this prefers plugins
-                    // that are found first.  E.g.,
-                    // QCoreApplication::addLibraryPath() prepends a path to the
-                    // list of library paths, and this say custom plugins are
-                    // found first.
-                    if (!plugins.contains(keys[k]))
-                        plugins[keys[k]] = driPlu;
-                }
-                allKeys.append(keys);
-                if (debugLevel) {
-                    qDebug() << "keys" << keys;
-                }
-            }
-            else {
-                if (debugLevel) {
-                    qDebug() << "not a plugin";
-                }
-            }
-
+            initInstance(instance, debugLevel);
         }
     }
 

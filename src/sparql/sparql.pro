@@ -18,7 +18,7 @@ install_headers.files =
 
 include($$QTSPARQL_BUILD_TREE/include/$$TARGET/headers.pri)
 
-include_headers.files = $$SYNCQT.HEADER_FILES
+include_headers.files = $$SYNCQT.HEADER_FILES $$SYNCQT.PRIVATE_HEADER_FILES
 include_headers.path = $$QTSPARQL_INSTALL_HEADERS
 INSTALLS += include_headers
 
