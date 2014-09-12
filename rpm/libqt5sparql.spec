@@ -1,5 +1,5 @@
 Name: libqt5sparql
-Version: 0.2.1
+Version: 0.2.13
 Release: 1
 Summary: Library for accessing RDF stores
 Group:   System/Libraries
@@ -37,6 +37,7 @@ Requires:  %{name} >= %{version}
 BuildRequires: pkgconfig(Qt5Xml)
 BuildRequires: pkgconfig(Qt5Test)
 BuildRequires: pkgconfig(Qt5Gui)
+Requires: libqt5sparql-endpoint >= %{version}
 Requires: libqt5sparql-tracker >= %{version}
 Requires: libqt5sparql-tracker-direct >= %{version} 
 
