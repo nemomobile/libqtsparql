@@ -1,4 +1,4 @@
-usr/lib/libQtSparql.so
+usr/lib/libQt5Sparql.so
 usr/lib/pkgconfig/*
-usr/share/qt4/mkspecs/features/*
-usr/include/QtSparql/*
+usr/share/qt5/mkspecs/features/*
+usr/include/Qt5Sparql/*

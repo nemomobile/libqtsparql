@@ -1,3 +1,4 @@
+
 /****************************************************************************
 **
 ** Copyright (C) 2010-2011 Nokia Corporation and/or its subsidiary(-ies).
@@ -43,6 +44,7 @@
 
 #include <QtTest/QtTest>
 #include <QtSparql>
+#include <unistd.h>
 
 class tst_QSparqlTrackerDirect : public TrackerDirectCommon
 {

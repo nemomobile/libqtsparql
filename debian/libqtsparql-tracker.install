@@ -1,1 +1,2 @@
-/usr/lib/qt4/plugins/sparqldrivers/libqsparqltracker.so
+/usr/lib/*/qt5/plugins/sparqldrivers/libqsparqltracker.so
+
