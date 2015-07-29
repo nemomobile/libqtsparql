@@ -1,5 +1,3 @@
-usr/lib/libQtSparql.so.*
-/usr/lib/qt4/imports/QtSparql/qmldir
-/usr/lib/qt4/imports/QtSparql/libsparqllistmodel.so
-/usr/lib/qt4/imports/QtSparql/libsparqlconnection.so
-/usr/lib/qt4/imports/QtSparql/libsparqlresultslist.so
+usr/lib/libQt5Sparql.so.*
+usr/lib/*/qt5/qml/QtSparql/*
+
