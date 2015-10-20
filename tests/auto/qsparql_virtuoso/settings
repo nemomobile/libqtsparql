@@ -1,3 +1,0 @@
-[Settings]
-portNumber=1234
-driver=/usr/local/virtuoso-opensource/lib/virtodbc_r.so
