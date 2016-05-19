@@ -5,6 +5,9 @@ Maintainer: James Thomas <james.thomas@codethink.co.uk>
 Build-Depends: debhelper (>= 5),
 	       quilt,
                qtbase5-dev,
+               qt5-qmake,
+               qt5-default,
+               qtdeclarative5-dev,
                doxygen,
                libtracker-sparql-0.16-dev,
 	       libiodbc2-dev
