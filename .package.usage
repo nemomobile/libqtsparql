@@ -1,0 +1,6 @@
+HOW TO PREPARE BUILD ENVIRONMENT
+  ./package setup
+
+HOW TO COMPILE A DEB PACKAGE
+  ./package build
+

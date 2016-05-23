@@ -12,7 +12,7 @@ build: debian/build-stamp
 debian/build-stamp: Makefile $(QUILT_STAMPFN)
 	dh_testdir
 	$(MAKE)
-	$(MAKE) doc
+	#$(MAKE) doc
 	touch $@
 
 clean: unpatch
