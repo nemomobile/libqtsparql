@@ -9,7 +9,7 @@ Build-Depends: debhelper (>= 5),
                qt5-default,
                qtdeclarative5-dev,
                doxygen,
-               libtracker-sparql-0.16-dev,
+               libtracker-sparql-1.0-dev,
 	       libiodbc2-dev
 Standards-Version: 3.9.1
 
@@ -36,13 +36,13 @@ Depends: libqtsparql0 (= ${binary:Version}),
          ${misc:Depends}
 Description: Library for accessing RDF stores.
 
-Package: libqtsparql-doc
-Section: doc
-Architecture: all
-Depends: ${misc:Depends}
-Description: Library for accessing RDF stores.
- .
- This package contains the documentation.
+#Package: libqtsparql-doc
+#Section: doc
+#Architecture: all
+#Depends: ${misc:Depends}
+#Description: Library for accessing RDF stores.
+# .
+# This package contains the documentation.
 
 Package: libqtsparql-tests
 Section: devel

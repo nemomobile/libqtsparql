@@ -1,0 +1,57 @@
+#!/bin/bash
+####################################################################
+#
+# This script provides two helpers. One for preparing a cowbuilder
+# environment for compiling and another one for building
+# the actual package.
+#
+# USAGE:
+#
+#  This will prepare the environment on your Ubuntu 16.04 LTS:
+#   ./package setup
+#
+#  And after that you can use this command to compile the package:
+#   ./package build
+#
+#
+# Author: Juhapekka Piiroinen <juhapekka.piiroinen@link-motion.com>
+# License: LGPL v2.1
+#
+# (C) Link Motion Oy
+####################################################################
+set -e
+
+CMD=$1
+SCRIPTPATH=`dirname $0`
+
+pushd ${SCRIPTPATH} > /dev/null
+echo ${CMD}
+
+if [[ -z ${CMD} ]]; then
+  cat .package.usage
+  exit 1
+fi
+
+if [[ "${CMD}" == "setup" ]]; then
+  echo
+  echo "This will install the development tools."
+  echo
+  echo "press <enter> to continue or ctrl+c to cancel."
+  read
+  sudo apt-get install ubuntu-dev-tools debhelper cowbuilder
+  cowbuilder-dist xenial amd64 create
+  echo "Build environment is now ready."
+  exit 0
+elif [[ "${CMD}" == "build" ]]; then
+  echo
+  echo "You are about to build a deb package."
+  echo
+  echo "press <enter> to continue or ctrl+c to cancel."
+  read
+
+  debuild -S -us -uc
+  cowbuilder-dist xenial amd64 build ../libqtsparql_0.2.6~unreleased.dsc
+  echo "Package is now built and is available at ~/pbuilder/xenial_results/"
+else
+  cat .package.usage
+fi

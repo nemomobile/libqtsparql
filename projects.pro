@@ -18,7 +18,7 @@ SUBDIRS = src tests examples
 xclean.commands = rm -rf lib plugins include
 xclean.depends = clean
 
-include(doc/doc.pri)
+#include(doc/doc.pri)
 
 check.CONFIG = recursive
 check.recurse = tests
